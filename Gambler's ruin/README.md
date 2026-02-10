@@ -41,7 +41,7 @@ $$\hat\mu = \frac 1 M \sum\limits_{m=1}^M \tau^{(m)}$$
 
 95% confidence intervals are computed using the Central Limit Theorem.
 
-## Theoretical results\ 
+## Theoretical results \ 
 for p = $ \frac 1 2$ :  
 $$\mathbb P_i(\tau_N < \tau_0) = \frac i N, \quad \mathbb E_i[\tau] = i(N-i)$$
 
@@ -68,6 +68,7 @@ src/
 - Confidence interval construction
 - Theoretical validation
 - Modular scientific programming in Python
+
 
 
 
