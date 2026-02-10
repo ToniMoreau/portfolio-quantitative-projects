@@ -31,9 +31,9 @@ $$
 \tau = \min\left\{ n \ge 0 : X_n \in \{0, N\} \right\}
 $$
 
-## Monte Carlo Estimation 
+## Monte Carlo Estimation\
 For M simulated trajectories :
-**Probability estimator**  
+**Probability estimator**\
 $$
 \hat\theta = \frac 1 M \sum\limits_{i=1}^M 1_{\left\{\tau_N < \tau_0 \right\}}
 $$
@@ -81,6 +81,7 @@ src/
 - Theoretical validation
 
 - Modular scientific programming in Python
+
 
 
 
