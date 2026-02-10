@@ -20,8 +20,10 @@ We consider a Markov chain on {0,1,...,N} with absorbing states 0 and N.
 
 For $i \in \{1,\dots,N-1\}$:
 $$
-\mathbb{P}(X_{n+1} = i+1 \mid X_n = i) = p, \quad \mathbb P(X_{n+1} = i-1 \mid X_n = i) = 1-p = q
+\mathbb{P}(X_{n+1} = i+1 \mid X_n = i) = p,\quad
+\mathbb{P}(X_{n+1} = i-1 \mid X_n = i) = 1 - p = q
 $$
+
 
 The absorption time is : 
 $$\tau = \min{\left\{n \ge 0 : X_n \in \left\{0,N\right\}\right\}}$$
@@ -75,6 +77,7 @@ src/
 - Theoretical validation
 
 - Modular scientific programming in Python
+
 
 
 
