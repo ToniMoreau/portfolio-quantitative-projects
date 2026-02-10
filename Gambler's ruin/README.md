@@ -38,7 +38,7 @@ $$
 \hat\theta = \frac 1 M \sum\limits_{i=1}^M 1_{\left\{\tau_N < \tau_0 \right\}}
 $$
 
-> where $\tau_0$ and $\tau_N$ are the first hitting times of the absorbing states.
+> where $\tau_0$ and $\tau_N$ are the first hitting times of the absorbing states.  
 **Time estimator** :   
 $$
 \hat\mu = \frac 1 M \sum\limits_{m=1}^M \tau^{(m)}
@@ -80,6 +80,7 @@ src/
 - Theoretical validation
 
 - Modular scientific programming in Python
+
 
 
 
