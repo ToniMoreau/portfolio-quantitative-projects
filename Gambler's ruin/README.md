@@ -26,11 +26,13 @@ $$
 
 
 The absorption time is : 
-$$\tau = \min{\left\{n \ge 0 : X_n \in \left\{0,N\right\}\right\}}$$
+$$
+\tau = \min{\left\{n \ge 0 : X_n \in \left\{0,N\right\}\right\}}
+$$
 
 ## Monte Carlo Estimation 
 For M simulated trajectories :
-- Probability estimator : 
+**Probability estimator**
 $$
 \hat\theta = \frac 1 M \sum\limits_{i=1}^M 1_{\left\{\tau_N < \tau_0 \right\}}
 $$
@@ -77,6 +79,7 @@ src/
 - Theoretical validation
 
 - Modular scientific programming in Python
+
 
 
 
