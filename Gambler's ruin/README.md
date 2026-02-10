@@ -27,7 +27,7 @@ $$
 
 The absorption time is : 
 $$
-\tau = \min{\left\{n \ge 0 : X_n \in \left\{0,N\right\}\right\}}
+\tau = \min {\left\{ n \ge 0 : X_n \in \left\{ 0,N \right\} \right\} }
 $$
 
 ## Monte Carlo Estimation 
@@ -79,6 +79,7 @@ src/
 - Theoretical validation
 
 - Modular scientific programming in Python
+
 
 
 
