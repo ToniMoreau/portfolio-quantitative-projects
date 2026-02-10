@@ -1,6 +1,7 @@
 import numpy as np
 
-
+# Markov method for the simulation 
+#Gambler's Ruin characteristics : 2 absorbing states (0,N)
 def simulate_gambler_ruin(N,p,i0, rng):
     if (type(N)!= int) or N<1:
         raise ValueError("Veuillez entrer un entier naturel valide")
@@ -32,4 +33,5 @@ def simulate_gambler_ruin(N,p,i0, rng):
         
         
     
+
     
