@@ -70,7 +70,8 @@ Simulations confirm convergence toward theoretical values and illustrate the $\m
 src/  
     markov.py      # simulation engine (Markov Model)  
     monte_carlo.py # estimators + CI95  
-    theory.py      # closed-form formulas 
+    theory.py      # closed-form formulas
+    main.py        # the code to run the simulation
 ```
 
 ## Skills Demonstrated
@@ -80,6 +81,7 @@ src/
 - Confidence interval construction
 - Theoretical validation
 - Modular scientific programming in Python
+
 
 
 
