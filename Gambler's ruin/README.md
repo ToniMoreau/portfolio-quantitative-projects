@@ -22,12 +22,12 @@ For $i \in \{1,\dots,N-1\}$:
 $$\mathbb{P}(X_{n+1} = i+1 \mid X_n = i) = p, \quad \mathbb P(X_{n+1} = i-1 \mid X_n = i) = 1-p = q$$
 
 The absorption time is : 
-$$ \tau = \min{\left\{n \ge 0 : X_n \in \left\{0,N\right\}\right\}}$$
+$$\tau = \min{\left\{n \ge 0 : X_n \in \left\{0,N\right\}\right\}}$$
 
 ## Monte Carlo Estimation 
 For M simulated trajectories :
 - Probability estimator : 
-$$ \hat\theta = \frac 1 M \sum\limits_{i=1}^M 1_{\left\{\tau_N < \tau_0 \right\}}$$
+$$\hat\theta = \frac 1 M \sum\limits_{i=1}^M 1_{\left\{\tau_N < \tau_0 \right\}}$$
 
 > where $\tau_0$ and $\tau_N$ are the first hitting times of the absorbing states.
 - Time estimator : 
@@ -39,10 +39,10 @@ $$\hat\mu = \frac 1 M \sum\limits_{m=1}^M \tau^{(m)} $$
 
 ## Theoretical results 
 for p = $ \frac 1 2$ :
-$$ \mathbb P_i(\tau_N < \tau_0) = \frac i N, \quad \mathbb E_i[\tau] = i(N-i) $$
+$$\mathbb P_i(\tau_N < \tau_0) = \frac i N, \quad \mathbb E_i[\tau] = i(N-i)$$
 
 for $p \not= \frac 1 2$:
-$$ \mathbb P_i(\ \tau_N < \tau_0 ) = \frac {1 - (\frac{1-p}{p})^i}{1 - (\frac{1-p}{p})^N}$$
+$$\mathbb P_i(\ \tau_N < \tau_0 ) = \frac {1 - (\frac{1-p}{p})^i}{1 - (\frac{1-p}{p})^N}$$
 
 Simulations confirm convergence toward theoretical values and illustrate the $\mathcal O(M^{-1/2})$ Monte Carlo error decay.
 
@@ -65,4 +65,5 @@ src/
 - Theoretical validation
 
 - Modular scientific programming in Python
+
 
