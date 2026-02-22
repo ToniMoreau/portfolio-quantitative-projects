@@ -21,7 +21,7 @@ print(f"theta_hat: {theta_hat} 95% confidence interval: {ci_95(theta_hat, se_hat
 
 # mu estimator observations : (expected hitting time)
 ## Theory vs Estimator comparison knowing: 
-# expected hitting time for N from initial state i0 = i0*(N-i0)
+# expected hitting time for N from initial state i0 -> i0*(N-i0)
 Ms = np.array([100,300,1000,3000]) #different size of observation
 N = 10                             #size of space of states
 p = 0.5                            #Probability
@@ -86,5 +86,6 @@ for i in range(simul):
         cpt_ic_valid += 1
         
 ratio_ic95_valid = 100* cpt_ic_valid/simul
+
 
 print(f"In {round(ratio_ic95_valid,1)}% of cases, theoretical theta is in ci95 ")
