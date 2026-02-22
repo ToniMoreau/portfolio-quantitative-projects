@@ -22,12 +22,12 @@ print(f"theta_hat: {theta_hat} 95% confidence interval: {ci_95(theta_hat, se_hat
 # mu estimator observations : (expected hitting time)
 ## Theory vs Estimator comparison knowing: 
 # expected hitting time for N from initial state i0 -> i0*(N-i0)
-Ms = np.array([100,300,1000,3000]) #different size of observation
-N = 10                             #size of space of states
-p = 0.5                            #Probability
-i0 = 6                             #initial state
+Ms = np.array([100,300,1000,10000,1000000]) #different size of observation
+N = 10                                      #size of space of states
+p = 0.5                                     #Probability
+i0 = 6                                      #initial state
 
-mu_th = i0*(N-i0)                  #theoretical expression
+mu_th = i0*(N-i0)                           #theoretical expression
 
 for M in Ms:
     rng100 = np.random.default_rng(100 + M)
@@ -36,8 +36,8 @@ for M in Ms:
     
     print(f"M = {M} : \nmu_hat = {mu_hat}\nci 95 : {ci_95(mu_hat, se_hat)} \nabsolute error : {round(abs(mu_hat - mu_th),3)}")
 
-#On observe que l’erreur diminue globalement quand 𝑀 augmente, conformément à la loi 1/sqrt(M) du monte carlo
-#On observe une diminution globale de l’erreur quand M augmente, compatible avec la décroissance 𝑂(𝑀−1/2)O(M−1/2) de l’erreur Monte Carlo. Les fluctuations restantes viennent de la variance élevée du temps d’absorption.
+#We observe an overall decrease in the error as 𝑀 increases, consistent with the 𝑂(𝑀^(1/2)) convergence rate of Monte Carlo error. 
+#The remaining fluctuations are due to the high variance of the absorption time.
 
 # Theta estimator observations
 ## Theory vs Estimator comparison knowing: 
@@ -72,7 +72,7 @@ simul = 50
 N = 25
 p = 0.5
 i0 = 12
-M = 1000
+M = 10000
 theta_th = theta_theory(N,p, i0)
 cpt_ic_valid = 0 #counts if theoretical value hit the confidence interval
 
@@ -89,3 +89,4 @@ ratio_ic95_valid = 100* cpt_ic_valid/simul
 
 
 print(f"In {round(ratio_ic95_valid,1)}% of cases, theoretical theta is in ci95 ")
+
