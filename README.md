@@ -38,15 +38,6 @@ The work presented here reflects a structured and rigorous approach to applied m
 - Validation with theoretical results
 ---
 
-### 2.
----
-
-### 3.
----
-
-### 4. Black–Scholes Model and Calibration
----
-
 ## Technical Stack
 
 - Python (NumPy, SciPy, Matplotlib)
