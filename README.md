@@ -58,6 +58,8 @@ The work presented here reflects a structured and rigorous approach to applied m
 - Python (NumPy, SciPy, Matplotlib)
 - Jupyter Notebooks
 - LaTeX for mathematical reports
+- PySide6
+- Excel
 
 ---
 
