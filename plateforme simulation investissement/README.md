@@ -100,7 +100,7 @@ app/
 ├── models/            # Structures de données
 ├── data/              # Fichiers Excel
 └── main.py
-'''
+```
 
 ---
 
