@@ -31,11 +31,26 @@ The work presented here reflects a structured and rigorous approach to applied m
 ## Projects
 
 ### 1. Monte Carlo Simulation of Gambler's Ruin
-- Simulation of Markov Chain 
-- Estimators
-- Monte Carlo estimation
-- Convergence study
-- Validation with theoretical results
+
+- Simulation of a Markov chain  
+- Construction of estimators  
+- Monte Carlo estimation  
+- Convergence study  
+- Validation with theoretical results  
+
+---
+
+### 2. Investment Scenario Simulation Platform
+📁 [View project](./plateforme%20simulation%20investissement)
+
+- Development of a financial decision-support application (PySide6)  
+- Modeling of personal finances (income, expenses, credits, accounts)  
+- Simulation of investment projects (real estate, financial assets)  
+- Deterministic wealth evolution modeling (monthly time scale)  
+- Integration of compound interest, cash flows, and inflation  
+- Data management via structured Excel storage (pandas)  
+- Visualization of wealth dynamics using Matplotlib  
+
 ---
 
 ## Technical Stack
