@@ -122,9 +122,11 @@ Cette organisation permet une gestion simple et extensible des données.
 
 ## Installation : 
 ```
-git clone <url-du-repo>
-cd nom-du-projet
+git clone https://github.com/ToniMoreau/portfolio-quantitative-projects.git
+cd portfolio-quantitative-projects
+cd "plateforme simulation investissement"
 pip install -r requirements.txt
+
 ```
 
 ---
