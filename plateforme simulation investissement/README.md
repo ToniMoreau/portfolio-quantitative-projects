@@ -121,14 +121,18 @@ Cette organisation permet une gestion simple et extensible des données.
 --- 
 
 ## Installation : 
+```
 git clone <url-du-repo>
 cd nom-du-projet
 pip install -r requirements.txt
+```
 
 ---
 
 ## Utilisation : 
+```
 python main.py
+```
 
 ---
 
