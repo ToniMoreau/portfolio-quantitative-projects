@@ -31,6 +31,7 @@ The work presented here reflects a structured and rigorous approach to applied m
 ## Projects
 
 ### 1. Monte Carlo Simulation of Gambler's Ruin
+📁 [View project](./Gambler's%20ruin)
 
 - Simulation of a Markov chain  
 - Construction of estimators  
