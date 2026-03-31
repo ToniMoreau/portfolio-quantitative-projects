@@ -92,7 +92,7 @@ L’application intègre des graphiques dynamiques (Matplotlib) permettant de vi
 
 ## Architecture du projet
 
-```text
+```
 app/
 ├── ui/                # Interface PySide6 (pages, widgets)
 ├── services/          # Logique métier (simulation, calculs financiers)
@@ -100,6 +100,7 @@ app/
 ├── models/            # Structures de données
 ├── data/              # Fichiers Excel
 └── main.py
+'''
 
 ---
 
