@@ -1,2 +1,0 @@
-
-    app.setStyleSheet(f.read())
