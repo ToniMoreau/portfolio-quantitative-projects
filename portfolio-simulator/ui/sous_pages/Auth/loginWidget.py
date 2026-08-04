@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
 
-from services import AppContext
+from services import AppContext, Page
 from session import Session
     
 class LoginWidget(QWidget):

@@ -1,9 +1,10 @@
+#flattened
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox, QWidget, QVBoxLayout, QHBoxLayout,  QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
 from PySide6.QtGui import QIntValidator, QDoubleValidator
-from services import AppContext
+from services import AppContext, Page
 from services.domain_services.metierService import MetierService
 from session import Session
 from utils.finance_format import euro
@@ -18,6 +19,7 @@ class TransfertPage(QWidget):
         self.cb_service = appContext.cb_service
         self.depense_service = appContext.depense_service
         self.recette_service = appContext.recette_service
+        self.navigator = appContext.navigator
         
         self.banque_service = appContext.banque_service
         self.session = session
@@ -47,7 +49,7 @@ class TransfertPage(QWidget):
 
         nature_lbl = QLabel("Nature du transfert :")
         self.nature_input = QComboBox()
-        self.nature_input.addItems(self.depense_service.natures)
+        self.nature_input.addItems(self.depense_service.natures_customs)
         
         date_wgt = QWidget()
         date_lyt = QHBoxLayout(date_wgt)
@@ -91,7 +93,7 @@ class TransfertPage(QWidget):
         layout.addWidget(self.enregistrer_btn)
         layout.addWidget(self.retour_btn)
 
-        self.retour_btn.clicked.connect(self.back_to_hub.emit)
+        self.retour_btn.clicked.connect(lambda : self.navigator.go_to(Page.TRANSACTIONS))
         self.enregistrer_btn.clicked.connect(self.enregistrer_clicked)
 
     def enregistrer_clicked(self):
@@ -147,7 +149,7 @@ class TransfertPage(QWidget):
             data["ID TRANSACTION"] = credit.id_transaction
             debit = self.depense_service.update_depense(None, data)
 
-            self.back_to_hub.emit()
+            self.navigator.go_to(Page.TRANSACTIONS)
     
     def load(self):
         scenario = self.scenario_service.scenario_actif

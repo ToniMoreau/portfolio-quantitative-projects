@@ -1,10 +1,10 @@
-from repositories.repositories import DepenseRepository
+from repositories import DepenseRepository
 from domain import Depense
 from datetime import date
 class DepenseService:
     def __init__(self, depense_repo: DepenseRepository):
         self.depense_repo = depense_repo
-        self.natures = ["", "Charges", "Crédit", "Autres"]
+        self.natures_customs = ["", "Charges", "Autres"]
         
         
     def update_depense(self, depense_id, data, is_transaction : bool | None = None):
@@ -38,9 +38,13 @@ class DepenseService:
             else:
                 new_depenses = []
                 for depense in depenses:
-                    print(type(depense.date_in))
-                    if (depense.date_in <= date_valide <= depense.date_out):
-                        new_depenses.append(depense)
+                    if (depense.frequence == "Annuel"):
+                        if (depense.date_in.year < date_valide.year <= depense.date_out.year 
+                            and date_valide.month == depense.date_in.month):
+                            new_depenses.append(depense)
+                    else:
+                        if (depense.date_in <= date_valide <= depense.date_out):
+                            new_depenses.append(depense)
                 depenses_totales.extend(new_depenses)
         return depenses_totales
     
@@ -50,7 +54,10 @@ class DepenseService:
     def delete_depense(self, depense : Depense):
         if depense is not None:
             self.depense_repo.delete(depense.id)
-        
+    
+    def get_loyers_from_scenario(self, scenario_id : int):
+        return self.depense_repo.get_by_({"NATURE": "Loyers", "ID SCENARIO":scenario_id})
+    
     def all_userdepense_from_scenario(self, scenario_id) -> list[Depense]:
         depenses = self.depense_repo.get_by_({"ID SCENARIO": scenario_id})
         if depenses is None:

@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel, QLineEdit
 from PySide6.QtCore import Signal
 
-from services import AppContext
+from services import AppContext, Page
 
 class AjouterBanquePage(QWidget):
     back_to_hub = Signal()

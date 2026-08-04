@@ -55,15 +55,17 @@ class DepenseRepository:
             depense = Depense(
                 id= int(row["ID DEPENSE"]),
                 id_user= int(row["ID USER"]),
-                id_transaction= 0 if pd.isna(row.get("ID TRANSACTION")) else int(row["ID TRANSACTION"]),
+                id_transaction= None if pd.isna(row.get("ID TRANSACTION")) else int(row["ID TRANSACTION"]),
                 intitule= s(row["INTITULE"]),
                 id_compte= int(row["ID COMPTE"]),
                 id_scenario= int(row["ID SCENARIO"]),
+                id_investissement= None if pd.isna(row.get("ID INVEST")) else int(row["ID INVEST"]),
                 frequence= s(row["FREQUENCE"]),
                 nature= s(row["NATURE"]),
                 montant= float(row["MONTANT"]),
                 date_in= row["DATE IN"],
-                date_out= row["DATE OUT"]
+                date_out= row["DATE OUT"],
+                indexation= 0 if pd.isna(row.get("INDEXATION")) else float(row["INDEXATION"])
             )
             depenses.append(depense)
 

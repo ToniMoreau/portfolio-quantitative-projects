@@ -9,15 +9,15 @@ from repositories.userRepository import UserRepository
 from session import Session
 from ui.sous_pages.Auth import AuthPage
 from ui.sous_pages.Profil import ProfilPage
-from services import AppContext
+from services import AppContext, Page
+from services.navigator_service import Page
 
 class MainWindow(QMainWindow):
     def __init__(self, appContext : AppContext, session : Session):
         super().__init__()
         self.session         = session
         self.appContext      = appContext
-        self.profil_service  = appContext.profile_Service
-        self.auth_service    = appContext.auth_service
+        self.navigator = appContext.navigator
         
         self.setWindowTitle("PySide6 - Multi pages")
 
@@ -69,11 +69,19 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.banque_page)    # index 3
         self.stack.addWidget(self.auth_page)      # index 4
 
+        self.my_pages = {
+            Page.ACCUEIL : self.accueil_page,
+            Page.PARAMETRES : self.parametre_page,
+            Page.PROFIL : self.profil_page,
+            Page.BANQUE_STANDALONE : self.banque_page,
+            Page.AUTH : self.auth_page
+        }
+        
         # Connecter les boutons à la navigation
-        btn_accueil.clicked.connect(lambda: self.load_index(0))
-        btn_params.clicked.connect(lambda: self.load_index(1))
+        btn_accueil.clicked.connect(lambda: self.navigator.go_to(Page.ACCUEIL))
+        btn_params.clicked.connect(lambda: self.navigator.go_to(Page.PARAMETRES))
         btn_profil.clicked.connect(self.btn_profil_clicked)
-        self.btn_banque.clicked.connect(lambda: self.load_index(3))
+        self.btn_banque.clicked.connect(lambda: self.navigator.go_to(Page.BANQUE_STANDALONE))
         self.btn_logout.clicked.connect(self.on_logout)
         
         main_layout.addWidget(sidebar_widget, 1)
@@ -81,30 +89,34 @@ class MainWindow(QMainWindow):
         
         self.auth_page.auth_success.connect(self.on_auth_success)
         
+        self.appContext.navigator.navigation_requested.connect(self.handle_navigation)
+        
+    def handle_navigation(self, page_key, context):
+        if page_key not in self.my_pages:
+            return
+        page = self.my_pages[page_key]
+        self.stack.setCurrentWidget(page)
+        if context and hasattr(page, "set_context"):
+            page.set_context(context)
+        if hasattr(page, "load"):
+            page.load()    
+            
     def on_auth_success(self, user):
         self.session.login(user) 
         if user.id == 1000000000:
             self.btn_banque.show()
-        self.profil_page.load_by_index(0)          # rafraîchit l’UI du profil
-        self.stack.setCurrentWidget(self.profil_page)  
+        self.navigator.go_to(Page.PROFIL)  
         self.btn_logout.show()
         
     def btn_profil_clicked(self):
         if self.session.is_authenticated():               #Utilisateur connecté donc page profil
             user = self.session.current_user
-            self.profil_page.load_by_index(0)
-            self.stack.setCurrentWidget(self.profil_page)
+            self.navigator.go_to(Page.PROFIL)
         else:                                             #Personne de connecté donc page d'authentification
-            self.stack.setCurrentWidget(self.auth_page)
+            self.navigator.go_to(Page.AUTH)
             
     def on_logout(self):
         self.session.logout()
-        self.stack.setCurrentWidget(self.auth_page)
+        self.navigator.go_to(Page.AUTH)
         self.btn_logout.hide()
         self.btn_banque.hide()
-
-    def load_index(self, index):
-        self.stack.setCurrentIndex(index)
-        page=  self.stack.currentWidget()
-        if hasattr(page, "load"):
-            page.load()

@@ -1,0 +1,5 @@
+from .logement_hub_page import LogementsHubPage
+from.mon_domicile_page import MonDomicilePage
+from .mes_locataires_page import MesLocatairesPage
+from.nouvelle_location_page import NouvelleLocationPage
+from .nouveau_locataire_page import NouveauLocatairePage

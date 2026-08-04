@@ -1,0 +1,27 @@
+
+
+Inflation system : par item, global
+Gestion de la "date du jour", comment procéder ? utilse pour present value, inflation, etc...
+
+beaucoup de page n'ont pas ou sont mal muni d'un "modifié"
+
+soon : 
+- gerer les "+d'infos"
+- gerer les value error en UI (ui plutot que raise Error)
+- transformer tous les ...actifs des services en actifs_id
+- analyse des rente immobilieres
+- implémentation rigoureuse des impositions de chaque nature (+frais diverses avocat, notaire...)
+- logement vacancy en fonction du prix du loyer
+- meilleure gestion des blocages de fenetres en mode sans scenario
+- dividendes frequence to be upgraded (various one, in combo boxes)
+- gérer l'impossibilité d'investissement boursier si pas les fonds
+- gérer comptant insuffisant pour achat bien / stocks
+
+
+fait :
+- ✅ corréler vente bien avec raccourcissement locations date
+- ✅ trier tous les services inutiles dans les pages
+- ✅ invest immo, rajouter les attributs de plaisance dans la creation d'un nouvel invest
+- ✅ stock option investissement 
+- ✅ gestion des locataires dans les biens immobiliers
+- ✅ la frequence des depenses/recette est qu'indicative, mais pas prise en compte dans les equations actuellement

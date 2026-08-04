@@ -45,7 +45,15 @@ class Salarié(Profil_pro):
     @property
     def mensuel_brut(self) -> float:
         return self.annuel_brut/12
-
+    
+    def mensuel_net(self) -> float:
+        return self.annuel_net /12
+    
+    def est_actif(self, date_courante :date):
+        if self.date_in <= date_courante <= self.date_out:
+            return True
+        
+        return False
     def __str__(self):
         str = f"{self.intitule_métier} depuis X "
         return str

@@ -7,3 +7,4 @@ class Scenario:
         id_user : int
         intitule : str
         date_in : date
+        date_limite : date

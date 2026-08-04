@@ -1,8 +1,9 @@
-from repositories.repositories import CreditcRepository, RecetteRepository, DepenseRepository
+from repositories import CreditcRepository, RecetteRepository, DepenseRepository
 from domain import Crédit
 from numpy import log
 
 from datetime import date
+from utils.date import *
 class CreditService:
     def __init__(self, credit_repo: CreditcRepository, recette_repo : RecetteRepository, depense_repo :DepenseRepository ):
         self.credit_repo = credit_repo
@@ -41,7 +42,7 @@ class CreditService:
         credits = self.credit_repo.get_by_({"ID SCENARIO": scenario_id})
         return credits
     
-    def montant_total_cb_from_scenario(self, scenario_id):
+    def montant_total_credits_from_scenario(self, scenario_id):
         credits = self.get_all_credits_from_scenario(scenario_id)
         somme = 0
         for credit in credits:
@@ -209,7 +210,6 @@ class CreditService:
         
         duree_mois = - (log(1 - (a_amortir * taux_mensuel)/mensu)/log(1+taux_mensuel))
         return duree_mois
-                        
-            
-            
+        
+        
             

@@ -1,7 +1,9 @@
 
+#flattened
+
 from PySide6.QtWidgets import (QHBoxLayout, QVBoxLayout, QWidget, QLabel, QPushButton, QStackedWidget)
 
-from services import AppContext
+from services import AppContext, Page
 from session import Session
 
 from .calcul_impot_page import CalculImpotsPage
@@ -10,8 +12,8 @@ from .calcul_impot_page import CalculImpotsPage
 class OutilsPage(QWidget):
     def __init__(self, appContext : AppContext, session : Session):
         super().__init__()
-        self.profil_service =appContext.profile_Service
         self.session = session
+        self.navigator = appContext.navigator
         
         layout = QHBoxLayout(self)
         
@@ -29,11 +31,11 @@ class OutilsPage(QWidget):
                 self.stack.addWidget(outil_page)
                 
                 outil_btn =  QPushButton(name)
-                outil_btn.clicked.connect( lambda: self.load_by_name(outil_page))
+                outil_btn.clicked.connect(lambda checked=False, p=outil_page: self.load_by_name(p))                
                 outil_page.back_to_outils.connect(lambda :self.stack.setCurrentIndex(0))
-            
+                sous_layout.addWidget(outil_btn)
+                
             sous_layout.addWidget(cat_title)
-            sous_layout.addWidget(outil_btn)
             
         layout.addWidget(self.stack)
         

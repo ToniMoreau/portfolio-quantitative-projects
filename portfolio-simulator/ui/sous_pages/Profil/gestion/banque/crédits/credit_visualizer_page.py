@@ -1,7 +1,8 @@
+#flattened
 from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QListWidgetItem, QListWidget, QComboBox, QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel, QLineEdit
 from PySide6.QtCore import Signal
 from utils.finance_format import euro, percent
-from services import AppContext,CreditPdfExporter
+from services import AppContext,CreditPdfExporter, Page
 from session import Session
 
 
@@ -13,9 +14,7 @@ class CréditVisualizerPage(QWidget):
         self.credit_service = appContext.credit_service
         self.scenario_service = appContext.scenario_service
         self.session = session
-        self.depense_service = appContext.depense_service
-        self.recette_service = appContext.recette_service
-        
+        self.navigator = appContext.navigator
         self.exporter = CreditPdfExporter()
         
         self.selected_item : QListWidgetItem | None =  None
@@ -34,8 +33,6 @@ class CréditVisualizerPage(QWidget):
         liste_layout = QHBoxLayout()
         amorti_layout = QVBoxLayout()
           
-
-        
         self.amorti_table = QTableWidget()
         
         amorti_layout.addWidget(self.amorti_table) 
@@ -55,7 +52,7 @@ class CréditVisualizerPage(QWidget):
         layout.addWidget(btn_export)
         layout.addWidget(btn_retour)
         btn_export.clicked.connect(self.export_clicked)
-        btn_retour.clicked.connect(self.back_to_hub.emit)        
+        btn_retour.clicked.connect(lambda : self.navigator.go_to(Page.CREDITS))        
     
     def export_clicked(self): 
         credit_id = self.choix_credit.currentData()

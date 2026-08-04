@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QListWidget, QListWidgetItem,QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel
-from services import AppContext
+from services import AppContext, Page
 from session import Session
 from .ajouter_banque_page import AjouterBanquePage
 
@@ -21,7 +21,6 @@ class BanquePage(QWidget):
         self.mlayout.addWidget(self.stack)
         
         self.stack.setCurrentIndex(0)
-        self.ajouter_page.back_to_hub.connect(lambda : self.load_index(0))
         
     def hub_page(self):
         page = QWidget()

@@ -4,14 +4,13 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
 
-from services import AppContext
+from services import AppContext, Page
 from session import Session
 
 class InfosProjetPage(QWidget):
     back_to_hub = Signal()
     def __init__(self, appContext : AppContext, session : Session):
         super().__init__()
-        self.profil_service = appContext.profile_Service
         self.session = session
         
         layout = QVBoxLayout(self)
@@ -23,6 +22,6 @@ class InfosProjetPage(QWidget):
         layout.addWidget(self.retour_btn)
 
         
-        self.retour_btn.clicked.connect(self.back_to_hub.emit)    
+        self.retour_btn.clicked.connect(lambda : appContext.navigator.go_to(Page.INVESTISSEMENT_HUB))    
                 
 

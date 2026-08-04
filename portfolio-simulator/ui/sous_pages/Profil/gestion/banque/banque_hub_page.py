@@ -1,7 +1,9 @@
+#flattened
+
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel
 from PySide6.QtCore import Signal
 
-from services import AppContext
+from services import AppContext, Page
 from session import Session
 
 from .comptes_bancaires import ComptesBancairesPage
@@ -16,24 +18,10 @@ class BanquePage(QWidget):
         self.session = session
         
         layout = QVBoxLayout(self)
-        self.stack = QStackedWidget()
         
         self.banque_hub = self.banque_hub_page()
-        print("cb")
-        self.cb_page = ComptesBancairesPage(self.appContext, self.session)
-        print("crédit")
-        self.credits_page = CreditsPage(self.appContext, self.session)
-        print('ciao')
-        self.stack.addWidget(self.banque_hub)#index 0
-        self.stack.addWidget(self.cb_page) #index 1
-        self.stack.addWidget(self.credits_page) #index 2
         
-        layout.addWidget(self.stack)
-        self.stack.setCurrentIndex(0)
-        
-        self.cb_page.back_to_hub.connect(lambda : self.stack.setCurrentIndex(0))
-        self.credits_page.back_to_hub.connect(lambda : self.stack.setCurrentIndex(0))
-        
+        layout.addWidget(self.banque_hub)
         
     def banque_hub_page(self):
         page = QWidget()
@@ -51,17 +39,18 @@ class BanquePage(QWidget):
         
         layout.addWidget(retour_btn)
         
-        comptes_btn.clicked.connect(lambda : self.load_index(1))
-        credits_btn.clicked.connect(lambda : self.load_index(2))
+        comptes_btn.clicked.connect(self.comptes_clicked)
+        credits_btn.clicked.connect(self.credits_clicked)
         
-        retour_btn.clicked.connect(self.back_signal.emit)
-        
+        retour_btn.clicked.connect(lambda : self.appContext.navigator.go_to(Page.INFOS_HUB))
         
         return page
     
-    def load_index(self, index):
-        self.stack.setCurrentIndex(index)
-        
-        page = self.stack.currentWidget()
-        if hasattr(page, "load"):
-            page.load()
+    def comptes_clicked(self):
+        self.appContext.cb_service.set_cb_actif(None)
+        self.appContext.navigator.go_to(Page.COMPTES_BANCAIRES)   
+    
+    def credits_clicked(self):
+        self.appContext.credit_service.set_credit_actif(None)
+        self.appContext.invest_service.set_invest_actif(None)
+        self.appContext.navigator.go_to(Page.CREDITS)

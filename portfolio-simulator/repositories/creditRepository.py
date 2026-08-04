@@ -58,6 +58,8 @@ class CreditcRepository:
                 id_utilisateur= int(row["ID USER"]), 
                 id_compte= 0 if pd.isna(row.get("ID COMPTE")) else int(row["ID COMPTE"]),
                 id_depense=0 if pd.isna(row.get("ID DEPENSE")) else int(row["ID DEPENSE"]),
+                id_recette=0 if pd.isna(row.get("ID RECETTE")) else int(row["ID RECETTE"]),
+                id_invest= 0 if pd.isna(row.get("ID INVEST")) else int(row["ID INVEST"]),
                 montant= int(row["MONTANT"]),
                 duree_diff_mois= int(row["DUREE DIFF (MOIS)"]),
                 durée_crédit_mois = None if pd.isna(row["DUREE (MOIS)"]) else int(row["DUREE (MOIS)"]),                

@@ -1,6 +1,7 @@
-from repositories.repositories import CompteBancaireRepository, RecetteRepository, DepenseRepository
+from repositories import CompteBancaireRepository, RecetteRepository, DepenseRepository
 from domain import Banque, CompteBancaire
 from datetime import date
+from utils.date import *
 from typing import NamedTuple
 
 class ResultatSolde(NamedTuple):
@@ -76,6 +77,7 @@ class CompteBancaireService:
         interets_dernier_mois = 0.0
         
         mois_debut = date_in_scenario.year * 12 + date_in_scenario.month
+        print(mois_debut)
         mois_fin = date_valide.year * 12 + date_valide.month
         
         for cb_id in cbs_id:
@@ -111,6 +113,7 @@ class CompteBancaireService:
             interets_totaux=round(interets_totaux, 2),
             interets_dernier_mois=round(interets_dernier_mois, 2)
         )
+          
     def _calculer_flux_mois(self, mois: int, recettes: list, depenses: list) -> float:
         """Calcule le flux net (recettes - dépenses) pour un mois donné."""
         flux = 0.0
@@ -125,10 +128,18 @@ class CompteBancaireService:
         
         return flux
 
-
     def _est_actif_ce_mois(self, flux, mois: int) -> bool:
         """Vérifie si une recette/dépense est active pour un mois donné."""
-        mois_debut = flux.date_in.year * 12 + flux.date_in.month
-        mois_fin = flux.date_out.year * 12 + flux.date_out.month
-        return mois_debut <= mois <= mois_fin
+        year, month = get_date_tuple_from_month(mois)
+        year_in,month_in = (flux.date_in.year, flux.date_in.month)
+        year_out, month_out = (flux.date_out.year, flux.date_out.month)
+        
+        if flux.frequence == "Annuel":            
+            return month_in == month and year_in < year <= year_out
+        else:
+            mois_debut = year_in * 12 + month_in
+            mois_fin = year_out * 12 + month_out
+            
+            return mois_debut <= mois <= mois_fin
+    
         

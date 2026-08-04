@@ -1,1 +1,1 @@
-from .banque_page import BanquePage
+from .banque_hub_page import BanquePage

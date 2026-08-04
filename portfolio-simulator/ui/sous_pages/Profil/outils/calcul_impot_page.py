@@ -1,10 +1,12 @@
+#flattened
+
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,  QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
 
 from session import Session
-from services import AppContext
+from services import AppContext, Page
 from utils.finance_format import euro,percent
 
 class CalculImpotsPage(QWidget):
@@ -16,7 +18,7 @@ class CalculImpotsPage(QWidget):
         self.metier_service = appContext.metier_service
         self.scenario_service = appContext.scenario_service
         self.session = session
-        
+        self.navigator = appContext.navigator
         layout = QVBoxLayout(self)
         
         title = QLabel("Calculateur d'impots")
@@ -49,7 +51,7 @@ class CalculImpotsPage(QWidget):
         
     def retour_clicked(self):
         self.resultat_label.setText("")
-        self.back_to_outils.emit()
+        self.navigator.go_to(Page.OUTILS)
         
     def load(self):
         profils_pro = self.metier_service.get_metier_by_scenario(self.scenario_service.scenario_actif.id) or []

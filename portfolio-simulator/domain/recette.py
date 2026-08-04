@@ -7,6 +7,7 @@ class Recette:
     montant : float
     frequence : str
     nature : str
+    indexation : float
     
     id_scenario : int
     id_user : int
@@ -16,7 +17,7 @@ class Recette:
     date_out:date
     
     id_transaction : int | None = None
-
+    id_investissement : int | None = None
     
     
     

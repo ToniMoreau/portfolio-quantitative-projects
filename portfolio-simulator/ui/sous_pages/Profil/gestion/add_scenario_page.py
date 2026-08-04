@@ -1,9 +1,10 @@
+#flattened 
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox, QWidget, QVBoxLayout, QHBoxLayout,  QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
-from services import AppContext
+from services import AppContext, Page
 from services.domain_services.metierService import MetierService
 from session import Session
 
@@ -15,6 +16,7 @@ class AddScenarioPage(QWidget):
         super().__init__()
         self.scenario_service = appContext.scenario_service
         self.session = session
+        self.navigator = appContext.navigator
         
         layout = QVBoxLayout(self)
         
@@ -50,7 +52,7 @@ class AddScenarioPage(QWidget):
         layout.addWidget(self.annuler_btn)
         
         #actions boutons
-        self.annuler_btn.clicked.connect(self.back_to_hub.emit)
+        self.annuler_btn.clicked.connect(lambda : self.navigator.go_to(Page.INFOS_HUB))
         self.enregistrer_btn.clicked.connect(self.enregistrer_clicked)
         
     def enregistrer_clicked(self):    
@@ -91,7 +93,7 @@ class AddScenarioPage(QWidget):
             scenario = self.scenario_service.update_scenario(id, data)
             self.scenario_service.set_scenario_actif(scenario)
             
-            self.back_to_hub.emit()
+            self.navigator.go_to(Page.INFOS_HUB)
     
     def load(self):
         self.month_input.clear()

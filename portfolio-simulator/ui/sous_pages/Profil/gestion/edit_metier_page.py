@@ -1,10 +1,11 @@
+#flattened 
 
 from PySide6.QtGui import QIntValidator, QDoubleValidator
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QComboBox, QWidget, QVBoxLayout, QHBoxLayout,  QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
-from services import AppContext
+from services import AppContext, Page
 from services.domain_services.metierService import MetierService
 from session import Session
 from utils.finance_format import age, euro
@@ -18,8 +19,8 @@ class EditMetierPage(QWidget):
         self.recette_service = appContext.recette_service
         self.cb_service = appContext.cb_service
         self.banque_service = appContext.banque_service
-        self.fiscalite_service = appContext.fisca_service
         self.scenario_service = appContext.scenario_service
+        self.navigator = appContext.navigator
         self.session = session
         
         layout = QVBoxLayout(self)
@@ -157,7 +158,7 @@ class EditMetierPage(QWidget):
         
         #actions boutons
         self.add_metier_btn.clicked.connect(lambda : self.add_edit_clicked("add"))
-        self.retour_btn.clicked.connect(self.back_to_hub.emit)
+        self.retour_btn.clicked.connect(lambda : self.navigator.go_to(Page.INFOS_HUB))
         self.modifier_btn.clicked.connect(lambda : self.add_edit_clicked("edit"))
         self.suppr_metier_btn.clicked.connect(self.suppr_clicked)
         

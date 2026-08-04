@@ -28,6 +28,8 @@ class ScenarioRepository:
                     self._df_cache["ID SCENARIO"] = pd.to_numeric(self._df_cache["ID SCENARIO"], errors="coerce").astype("Int64")
                 if "DATE IN" in self._df_cache.columns:
                     self._df_cache["DATE IN"] = pd.to_datetime(self._df_cache["DATE IN"]).dt.date
+                if "DATE LIMITE" in self._df_cache.columns:
+                    self._df_cache["DATE LIMITE"] = pd.to_datetime(self._df_cache["DATE LIMITE"]).dt.date
         return self._df_cache
 
     def _save_df(self, df: pd.DataFrame) -> None:
@@ -55,7 +57,8 @@ class ScenarioRepository:
                 id= int(row["ID SCENARIO"]),
                 id_user= int(row["ID USER"]),
                 intitule= s(row["INTITULE"]),
-                date_in= row["DATE IN"]
+                date_in= row["DATE IN"],
+                date_limite= row["DATE LIMITE"]
             )
             scenarios.append(scenario)
 

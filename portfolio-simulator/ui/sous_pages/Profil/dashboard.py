@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
 )
 
 
-from services import AppContext
+from services import AppContext, Page
 from session import Session
 
 class DashboardPage(QWidget):

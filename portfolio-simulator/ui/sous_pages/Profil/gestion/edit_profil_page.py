@@ -1,18 +1,22 @@
+#flattened 
+
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,  QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
 
-from services import ProfileService
-from session import Session
 
+from services import ProfileService, AppContext
+from session import Session
+from services.navigator_service import Page
 
 class EditProfilPage(QWidget):
     back_to_hub = Signal()
-    def __init__(self, profile_service : ProfileService, session : Session):
+    def __init__(self, appContext : AppContext, session : Session):
         super().__init__()
-        self.profile_service = profile_service
+        self.profile_service = appContext.profile_Service
         self.session = session
+        self.navigator = appContext.navigator
         
         self.mlayout = QVBoxLayout(self)
         
@@ -53,7 +57,7 @@ class EditProfilPage(QWidget):
         layout.addWidget(modifier_btn)
         layout.addWidget(retour_btn)
         modifier_btn.clicked.connect(lambda : self.stack.setCurrentIndex(1))
-        retour_btn.clicked.connect(self.back_to_hub.emit)
+        retour_btn.clicked.connect(lambda : self.navigator.go_to(Page.INFOS_HUB))
         
         return page
 

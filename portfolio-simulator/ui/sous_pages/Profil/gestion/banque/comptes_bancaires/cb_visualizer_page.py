@@ -1,7 +1,9 @@
+#flattened 
+
 from PySide6.QtWidgets import QTableWidget, QTableWidgetItem,QListWidgetItem, QListWidget, QComboBox, QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel, QLineEdit
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont, QIntValidator
-from services import AppContext
+from services import AppContext, Page
 from session import Session
 from ui.widgets import GraphWidget
 from utils.finance_format import euro
@@ -12,7 +14,6 @@ SOLDE_FONT.setPointSize(40)
 SOLDE_FONT.setBold(True)
 
 class CbVisualizerPage(QWidget):
-    back_to_hub = Signal()
     def __init__(self, appContext : AppContext, session : Session):
         super().__init__()
         self.banque_service = appContext.banque_service
@@ -21,6 +22,7 @@ class CbVisualizerPage(QWidget):
         self.session = session
         self.depense_service = appContext.depense_service
         self.recette_service = appContext.recette_service
+        self.navigator = appContext.navigator
         
         self.selected_item : QListWidgetItem | None =  None
         
@@ -93,11 +95,12 @@ class CbVisualizerPage(QWidget):
         
         btn_retour = QPushButton("Retour")
         layout.addWidget(btn_retour)
-        btn_retour.clicked.connect(self.back_to_hub.emit)
+        btn_retour.clicked.connect(lambda : self.navigator.go_to(Page.COMPTES_BANCAIRES))
         
     def cell_clicked(self, row, col):
         item_ref = self.transac_table.item(row, 0)
         if item_ref is None:
+            self.suppr_objet.hide()
             return
         depense_id = item_ref.data(1)
         depense = self.depense_service.get_depense_by_id(depense_id)
@@ -106,10 +109,14 @@ class CbVisualizerPage(QWidget):
             self.suppr_objet.hide()
             return
         if depense is not None:
-            if depense.nature == "Crédit":
-                self.suppr_objet.hide()
+            if depense.nature in self.depense_service.natures_customs:
+                self.suppr_objet.show()
                 return
-        self.suppr_objet.show()
+        if recette is not None:
+            if recette.nature in self.recette_service.natures_customs:
+                self.suppr_objet.show()
+                return
+        self.suppr_objet.hide()
         
     def on_suppr_clicked(self):
         item_row = self.transac_table.currentRow()
@@ -121,10 +128,13 @@ class CbVisualizerPage(QWidget):
         depense = self.depense_service.get_depense_by_id(item_ref.data(1))
         if depense is None or depense == []:
             recette = self.recette_service.get_recette_by_id(item_ref.data(1))
+            if recette.nature =="Revenus":
+                return
             depense = self.depense_service.get_by_transaction(recette.id_transaction)
         else:
             if depense.nature == "Crédits":
                 return
+
             recette = self.recette_service.get_by_transaction(depense.id_transaction)
             
         self.depense_service.delete_depense(depense)
@@ -149,8 +159,10 @@ class CbVisualizerPage(QWidget):
             if cb_id == "all":
                 cb_id = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif.id)
                 cb_id = [cb.id for cb in cb_id]
+            print("((((((((((((((((((((()))))))))))))))))))))")
             solde_du_mois_precedent = self.cb_service.solde_from_cb(self.scenario_service.scenario_actif.date_in, cb_id, previous_date)
             solde = self.cb_service.solde_from_cb(self.scenario_service.scenario_actif.date_in,cb_id, date_visu)
+            print("------------------")
             self.solde_lbl.setText(f"Solde : {euro(solde.solde)}")
             
             depenses = self.depense_service.get_all_depense_from_cb(cb_id, date_visu)
@@ -205,9 +217,7 @@ class CbVisualizerPage(QWidget):
             soldes_avec = []
             soldes_sans = []
             for periode in dates:
-                print(periode)
                 solde = self.cb_service.solde_from_cb(self.scenario_service.scenario_actif.date_in, cb_id, date_valide=periode)
-                print(solde.solde)
                 soldes_avec.append(solde.solde)
                 soldes_sans.append(solde.solde_hors_interets)
                 

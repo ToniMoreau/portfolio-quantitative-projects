@@ -1,11 +1,11 @@
-from repositories.repositories import RecetteRepository
+from repositories import RecetteRepository
 from domain import Recette
 from datetime import date
 
 class RecetteService:
     def __init__(self, recette_repo: RecetteRepository):
         self.recette_repo = recette_repo
-        self.nature_revenus = ["Revenus", "Revenus locatifs", "Salaires"]
+        self.natures_customs = ["","Revenus Divers", "Autres", "Dons/Cadeaux"]
 
     def update_recette(self, recette_id, data, is_transaction : bool | None = None):
         recette = self.recette_repo.get_by_ID(recette_id)
@@ -47,7 +47,7 @@ class RecetteService:
             somme += recette.montant
         return somme
     
-    def get_all_recette_from_cb(self, cbs_id : list[int], date_valide : int = None) -> list[Recette]:
+    def get_all_recette_from_cb(self, cbs_id : list[int], date_valide : date = None) -> list[Recette]:
         if isinstance(cbs_id, int):
             cbs_id = [cbs_id]
 
@@ -61,8 +61,13 @@ class RecetteService:
             else:
                 new_recettes = []
                 for recette in recettes:
-                    if (recette.date_in <= date_valide <= recette.date_out):
-                        new_recettes.append(recette)
+                    if (recette.frequence == "Annuel"):
+                        if (recette.date_in.year < date_valide.year <= recette.date_out.year 
+                            and date_valide.month == recette.date_in.month):
+                            new_recettes.append(recette)
+                    else:
+                        if (recette.date_in <= date_valide <= recette.date_out):
+                            new_recettes.append(recette)
                 recettes_totales.extend(new_recettes)
         return recettes_totales
 
@@ -83,7 +88,53 @@ class RecetteService:
                 date += 1
         return montant
                     
-                    
-                
-                
+    def get_locataires_from_scenario(self, scenario_id : int):
+        return self.recette_repo.get_by_({"NATURE": "Locataires", "ID SCENARIO":scenario_id})
+    
+    def get_locataires_from_immo(self, id_immo : int):
+        return self.recette_repo.get_by_({"NATURE" : "Locataires", "ID INVEST" : id_immo})
+    
+    def get_locataire_from_date(self, id_immo : int, date : date):
+        locataires = []
+        for locataire in self.get_locataires_from_immo(id_immo):
+            if locataire.date_in <= date <= locataire.date_out:
+                return locataire
+        return None
+    
+    def is_immo_free_between_(self,immo_id, date_in : date, date_out : date):
+
+        locataires = self.get_locataires_from_immo(immo_id) or []
         
+        for locataires in locataires:
+            if (locataires.date_in <= date_in < locataires.date_out
+                or locataires.date_in < date_out <= locataires.date_out
+                or date_in <= locataires.date_in <= date_out):
+                    return False
+        return True
+    
+    def update_location_from_vente_immo(self, immo_id: int, date_vente :date):
+        demenagent_apres_vente = self.get_moved_out_after_date(immo_id, date_vente) or []
+        emmenagent_apres_vente = self.get_moved_in_after_date(immo_id, date_vente)
+        
+        for locataire in demenagent_apres_vente:
+            if locataire.id in {l.id for l in emmenagent_apres_vente}:                
+                self.delete_recette(locataire)
+            else:
+                self.update_recette(locataire.id, {"DATE OUT" : date_vente})
+    
+    def get_moved_out_after_date(self, immo_id : int, date_seuil : date) -> list[Recette]:
+        locataires =  self.recette_repo.get_by_({"NATURE" : "Locataires", "ID INVEST" : immo_id})
+        
+        result = []
+        for locataire in locataires:
+            if locataire.date_out >= date_seuil:
+                result.append(locataire)
+        return result
+    def get_moved_in_after_date(self, immo_id : int, date_seuil  :date) -> list[Recette]:
+        locataires =  self.recette_repo.get_by_({"NATURE" : "Locataires", "ID INVEST" : immo_id})
+        
+        result = []
+        for locataire in locataires:
+            if locataire.date_in >= date_seuil:
+                result.append(locataire)
+        return result

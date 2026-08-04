@@ -1,4 +1,4 @@
-from repositories.repositories import BanqueRepository
+from repositories import BanqueRepository
 from domain import Banque
 class BanqueService:
     def __init__(self, banque_repo: BanqueRepository):

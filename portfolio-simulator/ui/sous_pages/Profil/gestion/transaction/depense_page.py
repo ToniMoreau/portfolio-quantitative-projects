@@ -1,9 +1,10 @@
+#flattened
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox, QWidget, QVBoxLayout, QHBoxLayout,  QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
 from PySide6.QtGui import QIntValidator
-from services import AppContext
+from services import AppContext, Page
 from services.domain_services.metierService import MetierService
 from session import Session
 
@@ -18,7 +19,7 @@ class AjouterDepensePage(QWidget):
         self.session = session
         self.scenario_service = appContext.scenario_service
         self.depense_service = appContext.depense_service
-        
+        self.navigator = appContext.navigator
         layout = QVBoxLayout(self)
         
         #Formulaire
@@ -33,7 +34,7 @@ class AjouterDepensePage(QWidget):
         self.montant.setPlaceholderText("Entrer un montant")
         intitule = QLabel("Libélé : ")
         self.intitule = QLineEdit()
-        self.intitule.setPlaceholderText("Entrer un lbiélé")
+        self.intitule.setPlaceholderText("Entrer un libélé")
         frequence = QLabel("Indiquer la fréquence de la dépense")
         self.frequence_choix = QComboBox()
         self.frequence_choix.addItems(["","Ponctuel", "Mensuel", "Annuel"])
@@ -57,7 +58,7 @@ class AjouterDepensePage(QWidget):
 
         nature = QLabel("Nature de la dépense :")
         self.nature = QComboBox()
-        self.nature.addItems(["Impots", "Investissements", "Charges", "Autres" ])
+        self.nature.addItems(self.depense_service.natures_customs)
         
         layout.addWidget(title)
         layout.addWidget(self.scenario_label)
@@ -96,7 +97,7 @@ class AjouterDepensePage(QWidget):
 
         
         #actions boutons
-        self.annuler_btn.clicked.connect(self.back_to_hub.emit)
+        self.annuler_btn.clicked.connect(lambda : self.navigator.go_to(Page.TRANSACTIONS))
         self.enregistrer_btn.clicked.connect(self.enregistrer_clicked)        
             
     def update_periode_from_freq(self):
@@ -155,7 +156,7 @@ class AjouterDepensePage(QWidget):
             data["DATE OUT"] =date_out
             
             revenu = self.depense_service.update_depense(None ,data)
-            self.back_to_hub.emit()
+            self.navigator.go_to(Page.TRANSACTIONS)
 
     def load(self):
         self.compte_bancaire_choix.clear()

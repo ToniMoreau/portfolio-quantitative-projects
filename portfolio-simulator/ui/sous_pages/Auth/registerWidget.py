@@ -2,12 +2,11 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
-from services import AppContext
+from services import AppContext, Page
 from session import Session
 class RegisterWidget(QWidget):
     auth_success = Signal(object)
     auth_error = Signal(str)
-    
     
     def __init__(self, appContext : AppContext, session : Session):
         super().__init__()

@@ -10,13 +10,15 @@ from services.domain_services import (FiscaliteService,
                                       DepenseService, 
                                       InvestissementService
                                     )
-from repositories.repositories import Repositories
+from repositories import Repositories
 
+from services.navigator_service import NavigatorService
 from domain.fiscalité import Fiscalité
 
 class AppContext:
     def __init__(self, repos : Repositories):
         self.repos = repos
+        self.navigator = NavigatorService()
         
         self.auth_service = AuthService(repos)
         
@@ -28,7 +30,7 @@ class AppContext:
         self.scenario_service = ScenarioService(repos.scenario_repo)
         self.recette_service = RecetteService(repos.recette_repo)
         self.depense_service = DepenseService(repos.depense_repo)
-        self.invest_service = InvestissementService(repos.invest_repo)
+        self.invest_service = InvestissementService(repos.immo_repo, repos.stockoption_repo)
         
         
         self.fisca_service = FiscaliteService(Fiscalité())

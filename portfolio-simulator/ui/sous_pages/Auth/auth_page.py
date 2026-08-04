@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 from .loginWidget import LoginWidget
 from .registerWidget import RegisterWidget
 
-from services import AppContext
+from services import AppContext, Page
 from session import Session
 
 class AuthPage(QWidget):

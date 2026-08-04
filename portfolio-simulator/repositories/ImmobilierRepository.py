@@ -3,13 +3,13 @@ from dataclasses import dataclass
 from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
-from datetime import date
-from domain.investissement import Investissement
+
+from domain import Immobilier
 
 
 
-class InvestissementRepository:
-    def __init__(self, xlsx_path: str | Path, sheet_name: str = "Investissements"):
+class ImmobilierRepository:
+    def __init__(self, xlsx_path: str | Path, sheet_name: str = "Immobilier"):
         self.xlsx_path = Path(xlsx_path)
         self.sheet_name = sheet_name
         self._df_cache: Optional[pd.DataFrame] = None  # cache optionnel
@@ -20,13 +20,13 @@ class InvestissementRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID INVESTISSEMENT", "ID USER", "VALEUR (€)", "DATE CREATION", "DATE FIN", "AUGMENTATION (€/AN)"
+                    "ID IMMOBILIER", "ID USER", "VALEUR (€)", "DATE CREATION", "DATE FIN", "AUGMENTATION (€/AN)"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)
                 # normalisation basique
-                if "ID INVESTISSEMENT" in self._df_cache.columns:
-                    self._df_cache["ID INVESTISSEMENT"] = pd.to_numeric(self._df_cache["ID INVESTISSEMENT"], errors="coerce").astype("Int64")
+                if "ID IMMOBILIER" in self._df_cache.columns:
+                    self._df_cache["ID IMMOBILIER"] = pd.to_numeric(self._df_cache["ID IMMOBILIER"], errors="coerce").astype("Int64")
                 if "DATE ACHAT" in self._df_cache.columns:
                     self._df_cache["DATE ACHAT"] = pd.to_datetime(self._df_cache["DATE ACHAT"]).dt.date
                 if "DATE VENTE" in self._df_cache.columns:
@@ -44,26 +44,28 @@ class InvestissementRepository:
             df.to_excel(writer, sheet_name=self.sheet_name, index=False)
         self._df_cache = df    
   
-    def _rows_to_invest(self, rows: pd.DataFrame) -> Investissement:
+    def _rows_to_immo(self, rows: pd.DataFrame) -> Immobilier:
         def s(x):
             return "" if pd.isna(x) else str(x)
         # normalisation
         if isinstance(rows, pd.Series):
             rows = rows.to_frame().T
 
-        invests = []
+        immos = []
         
         for _, row in rows.iterrows():
-            invest = Investissement( 
-                    id=int(row["ID INVESTISSEMENT"]),
-                    id_user=int(row["ID USER"]),
+            immo = Immobilier( 
+                    id=int(row["ID IMMOBILIER"]),
                     id_scenario= 0 if pd.isna(row.get("ID SCENARIO")) else int(row["ID SCENARIO"]),
+                    id_user= int(row["ID USER"]),
                     id_compte= 0 if pd.isna(row.get("ID COMPTE")) else int(row["ID COMPTE"]),
                     id_credit= None if pd.isna(row.get("ID CREDIT")) else int(row["ID CREDIT"]),
                     id_achat= None if pd.isna(row.get("ID ACHAT")) else int(row["ID ACHAT"]),
                     id_vente= None if pd.isna(row.get("ID VENTE")) else int(row["ID VENTE"]),
                     titre= s(row["TITRE"]),
-                    nature= s(row["NATURE"]),
+                    localisation= s(row["LOCALISATION"]),
+                    surface= int(row["SURFACE"]),
+                    type= s(row["TYPE"]),
                     etat= s(row["ETAT"]),
                     prix_achat= 0 if pd.isna(row.get("PRIX ACHAT")) else int(row["PRIX ACHAT"]),
                     comptant_pct=0 if pd.isna(row.get("COMPTANT (%)")) else float(row["COMPTANT (%)"]),
@@ -71,70 +73,69 @@ class InvestissementRepository:
                     date_out= None if pd.isna(row.get("DATE VENTE")) else row["DATE VENTE"],
                     valorisation_annuelle_pct= 0 if pd.isna(row.get("VALORISATION (%/AN)")) else float(row["VALORISATION (%/AN)"])
                     )
-            invests.append(invest)
-        return invests
+            immos.append(immo)
+        return immos
 
     # --------- getters ---------
-    def get_by_ID(self, invest_ID: int) -> Investissement:
+    def get_by_ID(self, immo_ID: int) -> Immobilier:
         df = self._load_df()
-        row = df[df["ID INVESTISSEMENT"] == invest_ID]
+        row = df[df["ID IMMOBILIER"] == immo_ID]
         if row.empty:
             return None
-        return self._rows_to_invest(row.iloc[0])[0]
+        return self._rows_to_immo(row.iloc[0])[0]
 
-    def get_by_userID(self, userID: str) -> Investissement:
+    def get_by_userID(self, userID: str) -> Immobilier:
         df = self._load_df()
         row = df[df["username"] == userID]
         if row.empty:
             return None
         
-        return self._rows_to_invest(row.iloc[::])
+        return self._rows_to_immo(row.iloc[::])
     
-    def get_by_(self, dict_str_int : dict[str, int]) -> list[Investissement]:
+    def get_by_(self, dict_str_int : dict[str, int]) -> list[Immobilier]:
         df = self._load_df()
         for by_str, by_id in dict_str_int.items():
             df = df[df[by_str] == by_id]
             if df.empty:
                 return []
         row = df
-        return self._rows_to_invest(row.iloc[::])
+        return self._rows_to_immo(row.iloc[::])
 
     # --------- writes ---------
-    def create(self, invest: dict[str, Any]) -> dict[str, Any]:
+    def create(self, immo: dict[str, Any]) -> dict[str, Any]:
         """
         user doit contenir au minimum: username, password_hash
-        ID INVESTISSEMENT sera généré si absent.
+        ID IMMOBILIER sera généré si absent.
         """
         df = self._load_df()
 
 
-        if "ID INVESTISSEMENT" not in invest or invest["ID INVESTISSEMENT"] is None:
-            next_ID = int(df["ID INVESTISSEMENT"].max()) + 1 if (len(df) and df["ID INVESTISSEMENT"].notna().any()) else 1
-            invest["ID INVESTISSEMENT"] = next_ID
-        invest = pd.DataFrame([invest])
-        df = pd.concat([df, invest], ignore_index=True)
+        if "ID IMMOBILIER" not in immo or immo["ID IMMOBILIER"] is None:
+            next_ID = int(df["ID IMMOBILIER"].max()) + 1 if (len(df) and df["ID IMMOBILIER"].notna().any()) else 1
+            immo["ID IMMOBILIER"] = next_ID
+        immo = pd.DataFrame([immo])
+        df = pd.concat([df, immo], ignore_index=True)
         self._save_df(df)
-        return self._rows_to_invest(invest)[0]
+        return self._rows_to_immo(immo)[0]
 
-    def update(self, invest_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
+    def update(self, immo_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()
 
-        IDx = df.index[df["ID INVESTISSEMENT"] == invest_ID]
+        IDx = df.index[df["ID IMMOBILIER"] == immo_ID]
         if len(IDx) == 0:
-            raise ValueError("Investissement introuvable")
+            raise ValueError("Immobilier introuvable")
 
         i = IDx[0]
         for k, v in patch.items():
-            if k == "ID INVESTISSEMENT":
+            if k == "ID IMMOBILIER":
                 continue
             print("UPDATE", k, "=>", v, "type:", type(v))
             df.at[i, k] = v
 
         self._save_df(df)
-        return self._rows_to_invest(df.iloc[i])[0]
+        return self._rows_to_immo(df.iloc[i])[0]
 
-    def delete(self, invest_ID: int) -> None:
+    def delete(self, immo_ID: int) -> None:
         df = self._load_df()
-        df2 = df[df["ID INVESTISSEMENT"] != invest_ID].copy()
+        df2 = df[df["ID IMMOBILIER"] != immo_ID].copy()
         self._save_df(df2)
-    

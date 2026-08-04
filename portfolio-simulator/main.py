@@ -1,8 +1,8 @@
 from ui.main_window import MainWindow
 from PySide6.QtWidgets import QApplication
 import sys
-from repositories.repositories import Repositories
-from services import AppContext
+from repositories.repos import Repositories
+from services import AppContext, Page
 from session import Session
 
 print("wtd")

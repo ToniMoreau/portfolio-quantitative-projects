@@ -1,11 +1,13 @@
 
+#flattened 
 
 
 from PySide6.QtWidgets import QComboBox, QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel, QLineEdit
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QIntValidator, QDoubleValidator
-from services import AppContext
+from services import AppContext, Page
 from session import Session
+
 
 class AjouterCompteBancairePage(QWidget):
     back_to_hub = Signal()
@@ -15,6 +17,7 @@ class AjouterCompteBancairePage(QWidget):
         self.banque_service = appContext.banque_service
         self.recette_service = appContext.recette_service
         self.cb_service = appContext.cb_service
+        self.navigator = appContext.navigator
         self.session = session
         self.scenario_service = appContext.scenario_service
         layout = QVBoxLayout(self)
@@ -60,7 +63,7 @@ class AjouterCompteBancairePage(QWidget):
 
         
         #actions boutons
-        self.annuler_btn.clicked.connect(self.back_to_hub.emit)
+        self.annuler_btn.clicked.connect(lambda : self.navigator.go_to(Page.COMPTES_BANCAIRES))
         self.enregistrer_btn.clicked.connect(self.enregistrer_clicked)
         
     def enregistrer_clicked(self):
@@ -116,7 +119,7 @@ class AjouterCompteBancairePage(QWidget):
             data_recette["FREQUENCE"] = "Ponctuel"
             
             recette = self.recette_service.update_recette(id_recette, data_recette)
-            self.back_to_hub.emit()
+            self.navigator.go_to(Page.COMPTES_BANCAIRES)
 
     def load(self):
         self.banque_choix.clear()

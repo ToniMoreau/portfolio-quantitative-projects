@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import ClassVar
 from datetime import date
-
+from utils.date import *
 
 # dans une banque il y a des profils bancaire, dans un profil bancaire il y a des crédits et des comptes, dans les comptes il y a des comptes bancaires
 
@@ -70,7 +70,9 @@ class Crédit:
     id_banque: int
     id_utilisateur : int
     id_compte : int
-    id_depense : int
+    id_depense : int | None= None
+    id_recette : int | None =  None
+    id_invest : int | None= None
     debut : date = None
     fin : date = None
     montant : float = 0
@@ -84,7 +86,22 @@ class Crédit:
     def __str__(self):
         return f"Crédit d'un montant de {self.montant} €, échéance de {self.mensualite_constante} €. Remboursement pendant {self.durée_crédit_année} mois"
 
+    def credit_restant_from_date(self, date : date):
+        total_remboursement = self.mensualite_constante * self.durée_crédit_mois
+        if date < self.debut:
+            return total_remboursement
+        return max(total_remboursement - self.mensualite_constante * month_count(self.debut, date),0)
+    
+    def duree_restante_from_date(self, date :date):
+        
+        return max(month_count(self.debut, self.fin) - month_count(self.debut, date),0)
+    
 
+    def prix_credit(self):
+        return self.mensualite_constante * self.durée_crédit_mois
 
-
-
+    def present_value(self):
+        monthly_inflation =  (1+0.015)**(1/12) - 1
+        print(self.mensualite_constante)
+        print(self.mensualite_constante*(1-(1+monthly_inflation)**(-self.durée_crédit_mois))/monthly_inflation)
+        return self.mensualite_constante*(1-(1+monthly_inflation)**(-self.durée_crédit_mois))/monthly_inflation
