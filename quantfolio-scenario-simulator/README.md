@@ -29,6 +29,7 @@ A dedicated interface allows users to manage financial information:
 - Transactions:
   - Expenses
   - Income
+- Different Investment types (Real Estate, Stocks)
 
 ---
 
