@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain import Recette
+from domain.entities import Recette
 
 class RecetteRepository:
     def __init__(self, xlsx_path: str | Path, sheet_name: str = "Recettes"):
@@ -18,7 +18,7 @@ class RecetteRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID RECETTE", "ID SCENARIO", "ID USER", "ID COMPTE", "INTITULE", "MONTANT", "FREQUENCE", "NATURE"
+                    "ID RECETTE", "ID TRANSACTION", "ID SCENARIO", "ID USER", "ID COMPTE", "ID SOURCE", "DATE IN", "DATE OUT", "INTITULE", "NATURE", "MONTANT", "FREQUENCE", "INDEXATION"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)
@@ -60,7 +60,7 @@ class RecetteRepository:
                 intitule= s(row["INTITULE"]),
                 id_compte= int(row["ID COMPTE"]),
                 id_scenario= int(row["ID SCENARIO"]),
-                id_investissement= None if pd.isna(row.get("ID INVEST")) else int(row["ID INVEST"]),
+                id_source= None if pd.isna(row.get("ID SOURCE")) else int(row["ID SOURCE"]),
                 frequence= s(row["FREQUENCE"]),
                 nature= s(row["NATURE"]),
                 montant= float(row["MONTANT"]),
@@ -113,11 +113,13 @@ class RecetteRepository:
             next_ID = int(df["ID TRANSACTION"].max()) + 1 if (len(df) and df["ID TRANSACTION"].notna().any()) else 1
             recette["ID TRANSACTION"] = next_ID
 
+        new_id =recette["ID RECETTE"]
         recette = pd.DataFrame([recette])
         df = pd.concat([df, recette ], ignore_index=True)
         self._save_df(df)
         
-        return self._rows_to_recette(recette)[0]
+        saved_row = df[df["ID RECETTE"] == new_id]
+        return self._rows_to_recette(saved_row)[0]
 
     def update(self, recette_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()

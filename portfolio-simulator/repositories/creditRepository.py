@@ -4,9 +4,9 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain.banque import Crédit
+from domain.entities.banque import Crédit
 
-class CreditcRepository:
+class CreditRepository:
     def __init__(self, xlsx_path: str | Path, sheet_name: str = "Crédits"):
         self.xlsx_path = Path(xlsx_path)
         self.sheet_name = sheet_name
@@ -18,7 +18,7 @@ class CreditcRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID CREDIT", "ID BANQUE", "ID USER", "ID COMPTE", "MONTANT", "DUREE DIFF (MOIS)", "DUREE (MOIS)", "MENSUALITE (€)", "TAUX (%)", "TYPE"
+                    "ID CREDIT", "ID SCENARIO","ID BANQUE", "ID COMPTE","ID USER", "ID SOURCE", "DATE IN", "DATE OUT", "MONTANT", "DUREE DIFF (MOIS)", "DUREE (MOIS)", "MENSUALITE (€)", "TAUX (%)", "TYPE"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)
@@ -57,9 +57,7 @@ class CreditcRepository:
                 id_banque= int(row["ID BANQUE"]), 
                 id_utilisateur= int(row["ID USER"]), 
                 id_compte= 0 if pd.isna(row.get("ID COMPTE")) else int(row["ID COMPTE"]),
-                id_depense=0 if pd.isna(row.get("ID DEPENSE")) else int(row["ID DEPENSE"]),
-                id_recette=0 if pd.isna(row.get("ID RECETTE")) else int(row["ID RECETTE"]),
-                id_invest= 0 if pd.isna(row.get("ID INVEST")) else int(row["ID INVEST"]),
+                id_source= 0 if pd.isna(row.get("ID SOURCE")) else int(row["ID SOURCE"]),
                 montant= int(row["MONTANT"]),
                 duree_diff_mois= int(row["DUREE DIFF (MOIS)"]),
                 durée_crédit_mois = None if pd.isna(row["DUREE (MOIS)"]) else int(row["DUREE (MOIS)"]),                
@@ -108,12 +106,14 @@ class CreditcRepository:
         if "ID CREDIT" not in credit or credit["ID CREDIT"] is None:
             next_ID = int(df["ID CREDIT"].max()) + 1 if (len(df) and df["ID CREDIT"].notna().any()) else 1
             credit["ID CREDIT"] = next_ID
+        new_id =credit["ID CREDIT"]
         credit = pd.DataFrame([credit])
         df = pd.concat([df, credit ], ignore_index=True)
         self._save_df(df)
         
-        return self._rows_to_credit(credit)[0]
-
+        saved_row = df[df["ID CREDIT"] ==new_id ]
+        return self._rows_to_credit(saved_row)[0]
+    
     def update(self, credit_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()
 

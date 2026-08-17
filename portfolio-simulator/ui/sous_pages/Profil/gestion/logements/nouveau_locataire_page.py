@@ -138,14 +138,14 @@ class NouveauLocatairePage(QWidget):
         month = self.month_entree_input.text().strip()
         year = self.year_entree_input.text().strip()
         if month and year:
-            scenario = self.scenario_service.scenario_actif
+            scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
             date_solde_comptes = date(int(year), int(month), 1)
             if scenario.date_in <= date_solde_comptes <= scenario.date_limite:
-                cbs = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif.id)
+                cbs = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif_id)
                 self.quel_compte_box.clear()
                 for cb in cbs:
                     banque = self.banque_service.get_banque_by_id(cb.id_banque)
-                    self.quel_compte_box.addItem(f"{cb.type} | {banque.nom} | {euro(self.cb_service.solde_from_cb(self.scenario_service.scenario_actif.date_in, cb.id, date_solde_comptes).solde)}", cb.id)
+                    self.quel_compte_box.addItem(f"{cb.type} | {banque.nom} | {euro(self.cb_service.solde_from_cb(scenario.date_in, cb.id, date_solde_comptes).solde)}", cb.id)
                 self.quel_compte_box.setDisabled(False)
         else:
             self.quel_compte_box.setDisabled(True)
@@ -178,7 +178,7 @@ class NouveauLocatairePage(QWidget):
             self.loyer_msg.setText("Dates incomplètes.")
             return False
 
-        scenario = self.scenario_service.scenario_actif
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
         
         date_in = date(int(year_in), int(month_in), 1)
         date_out = date(int(year_out), int(month_out),1)
@@ -233,7 +233,7 @@ class NouveauLocatairePage(QWidget):
             data = {}
             
             data["ID USER"] = self.session.current_user.id
-            data["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+            data["ID SCENARIO"] = self.scenario_service.scenario_actif_id
             data["ID COMPTE"] = quel_compte_id
             data["INTITULE"] = bien_vacant.titre
             data["MONTANT"] = loyer
@@ -243,35 +243,40 @@ class NouveauLocatairePage(QWidget):
             data["INDEXATION"] = indexation_pct/100
             data["NATURE"] = "Locataires"
             
-            data["ID INVEST"] = bien_vacant.id
+            data["ID SOURCE"] = bien_vacant.id
             
             loyer = self.recette_service.update_recette(None, data)
             self.navigator.go_to(Page.MES_LOCATAIRES)
             
     def load(self):
-        self.update_occupation_tab()
-        self.mes_logements_vacants_input.clear()
-        self.mes_logements_vacants_input.addItem("")
-        biens_vacants = self.invest_service.get_immo_actif_by_scenario(self.scenario_service.scenario_actif.id)
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            self.update_occupation_tab()
+            self.mes_logements_vacants_input.clear()
+            self.mes_logements_vacants_input.addItem("")
+            biens_vacants = self.invest_service.get_immo_actif_by_scenario(self.scenario_service.scenario_actif_id)
+            
+            for bien in biens_vacants:
+                self.mes_logements_vacants_input.addItem(bien.titre, bien.id)
         
-        for bien in biens_vacants:
-            self.mes_logements_vacants_input.addItem(bien.titre, bien.id)
-    
-        self.quel_compte_box.clear()
-        self.quel_compte_box.addItem("")
-        cbs = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif.id)
-        scenario_date_in = self.scenario_service.scenario_actif.date_in
-        
-        for cb in cbs:
-            banque = self.banque_service.get_banque_by_id(cb.id_banque)
-            self.quel_compte_box.addItem(f"{cb.type} | {banque.id} | {euro(self.cb_service.solde_from_cb(scenario_date_in, cb.id, scenario_date_in).solde)}", cb.id)
-        
-        self.loyer_input.setText("")
-        self.month_entree_input.setText("")
-        self.year_entree_input.setText("")        
-        self.month_sortie_input.setText("")
-        self.year_sortie_input.setText("")
-        
-        self.indexation_input.setText("")    
-        
-        self.page_msg.setText("")
+            self.quel_compte_box.clear()
+            self.quel_compte_box.addItem("")
+            cbs = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif_id)
+            scenario_date_in = scenario.date_in
+            
+            for cb in cbs:
+                banque = self.banque_service.get_banque_by_id(cb.id_banque)
+                self.quel_compte_box.addItem(f"{cb.type} | {banque.id} | {euro(self.cb_service.solde_from_cb(scenario_date_in, cb.id, scenario_date_in).solde)}", cb.id)
+            
+            self.loyer_input.setText("")
+            self.month_entree_input.setText("")
+            self.year_entree_input.setText("")        
+            self.month_sortie_input.setText("")
+            self.year_sortie_input.setText("")
+            
+            self.indexation_input.setText("")    
+            
+            self.page_msg.setText("")
+        else:
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.NOUVEAU_LOCATAIRE)

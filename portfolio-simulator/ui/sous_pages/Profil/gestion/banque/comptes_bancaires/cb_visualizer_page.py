@@ -1,14 +1,17 @@
 #flattened 
 
-from PySide6.QtWidgets import QTableWidget, QTableWidgetItem,QListWidgetItem, QListWidget, QComboBox, QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel, QLineEdit
+from PySide6.QtWidgets import QMessageBox, QTableWidget, QTableWidgetItem,QListWidgetItem, QListWidget, QComboBox, QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel, QLineEdit
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont, QIntValidator
-from services import AppContext, Page
+from services import AppContext, Page, PatrimoineService
 from session import Session
+from domain.errors import *
 from ui.widgets import GraphWidget
 from utils.finance_format import euro
 from datetime import date
 from utils.date import add_months, month_range
+from ui.widgets import confirm_and_delete
+from domain.entities import Depense, Recette
 SOLDE_FONT = QFont()
 SOLDE_FONT.setPointSize(40)
 SOLDE_FONT.setBold(True)
@@ -16,12 +19,14 @@ SOLDE_FONT.setBold(True)
 class CbVisualizerPage(QWidget):
     def __init__(self, appContext : AppContext, session : Session):
         super().__init__()
+        self.patrimoine_service = appContext.patrimoine_service
         self.banque_service = appContext.banque_service
         self.cb_service = appContext.cb_service
         self.scenario_service = appContext.scenario_service
         self.session = session
         self.depense_service = appContext.depense_service
         self.recette_service = appContext.recette_service
+        self.transaction_service = appContext.transaction_service
         self.navigator = appContext.navigator
         
         self.selected_item : QListWidgetItem | None =  None
@@ -117,33 +122,58 @@ class CbVisualizerPage(QWidget):
                 self.suppr_objet.show()
                 return
         self.suppr_objet.hide()
+    
+    def _route_deletion(self, entity):
+        """Returns one of: 'propagate', 'direct', 'blocked'."""
+        if isinstance(entity, Depense):
+            if entity.id_transaction is not None:
+                return 'propagate'
+            if entity.id_source is None:
+                return 'direct'
+            return 'blocked'
+
+        else:  # Recette
+            if entity.id_source is None or entity.nature == "Locataires":
+                return 'propagate'
+            return 'blocked'    
         
     def on_suppr_clicked(self):
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)
         item_row = self.transac_table.currentRow()
         if item_row <0:
             return
         item_ref = self.transac_table.item(item_row, 0)
         if item_ref is None:
             return
-        depense = self.depense_service.get_depense_by_id(item_ref.data(1))
-        if depense is None or depense == []:
-            recette = self.recette_service.get_recette_by_id(item_ref.data(1))
-            if recette.nature =="Revenus":
-                return
-            depense = self.depense_service.get_by_transaction(recette.id_transaction)
-        else:
-            if depense.nature == "Crédits":
-                return
+        entity_id = item_ref.data(1)
+        entity = self.recette_service.get_recette_by_id(entity_id) or self.depense_service.get_depense_by_id(entity_id)
 
-            recette = self.recette_service.get_by_transaction(depense.id_transaction)
-            
-        self.depense_service.delete_depense(depense)
-        self.recette_service.delete_recette(recette)
-        
-        self.update_visualisation()
+        if entity is None:
+            QMessageBox.warning(self, "Erreur", "Aucun élément sélectionné.")
+            return
+
+        route = self._route_deletion(entity)
+
+        if route == 'blocked':
+            QMessageBox.warning(self, "Suppression impossible",
+                                "Cet élément est généré automatiquement et ne peut pas être supprimé directement.")
+            return
+
+        try:
+            if route == 'propagate':
+                if confirm_and_delete(self.patrimoine_service, scenario, entity, self):
+                    self.update_visualisation()
+            else:  # direct
+                self.depense_service.delete_depense(entity.id)
+                self.update_visualisation()
+        except QuantFolioError as e:
+            QMessageBox.critical(self, "Suppression impossible", str(e))
+        except (ValueError, AttributeError) as e:
+            QMessageBox.critical(self, "Erreur inattendue", str(e))            
                 
     def update_visualisation(self):
-    
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)
+        
         cb_id = self.cb_choix_list.currentData()
         month_actif = self.month_visu_input.text().strip()
         year_actif = self.year_visu_input.text().strip()
@@ -157,12 +187,10 @@ class CbVisualizerPage(QWidget):
             previous_date = add_months(date_visu, -1)
             
             if cb_id == "all":
-                cb_id = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif.id)
+                cb_id = self.cb_service.all_userCB_from_scenario(scenario.id)
                 cb_id = [cb.id for cb in cb_id]
-            print("((((((((((((((((((((()))))))))))))))))))))")
-            solde_du_mois_precedent = self.cb_service.solde_from_cb(self.scenario_service.scenario_actif.date_in, cb_id, previous_date)
-            solde = self.cb_service.solde_from_cb(self.scenario_service.scenario_actif.date_in,cb_id, date_visu)
-            print("------------------")
+            solde_du_mois_precedent = self.cb_service.solde_from_cb(scenario.date_in, cb_id, previous_date)
+            solde = self.cb_service.solde_from_cb(scenario.date_in,cb_id, date_visu)
             self.solde_lbl.setText(f"Solde : {euro(solde.solde)}")
             
             depenses = self.depense_service.get_all_depense_from_cb(cb_id, date_visu)
@@ -170,7 +198,7 @@ class CbVisualizerPage(QWidget):
             self.transac_table.clearContents()
             self.transac_table.setRowCount(len(depenses) + len(recettes) +3)
             i=0  
-            if date_visu > self.scenario_service.scenario_actif.date_in:
+            if date_visu > scenario.date_in:
                 self.transac_table.setItem(i,0,QTableWidgetItem("Suivi"))
                 self.transac_table.setItem(i,2,QTableWidgetItem(f"Solde au {previous_date}"))
                 if solde_du_mois_precedent.solde >=0:
@@ -217,26 +245,30 @@ class CbVisualizerPage(QWidget):
             soldes_avec = []
             soldes_sans = []
             for periode in dates:
-                solde = self.cb_service.solde_from_cb(self.scenario_service.scenario_actif.date_in, cb_id, date_valide=periode)
+                solde = self.cb_service.solde_from_cb(scenario.date_in, cb_id, date_valide=periode)
                 soldes_avec.append(solde.solde)
                 soldes_sans.append(solde.solde_hors_interets)
                 
             self.graphe_figure.plot(dates, [soldes_avec,soldes_sans], ["Avec Intérêts", "Sans Intérêts"])
         
     def load(self):
-        scenario = self.scenario_service.scenario_actif
-        date_debut = scenario.date_in
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)
+        if scenario:
+            date_debut = scenario.date_in
 
-        self.scenario_label.setText(f"Scénario : {scenario.intitule}")
-                
-        self.month_visu_input.setText(f"{date_debut.month}")
-        self.year_visu_input.setText(f"{date_debut.year}")
-        
-        self.cb_choix_list.clear()
-        cbs = self.cb_service.all_userCB_from_scenario(scenario.id)
-        self.cb_choix_list.addItem("Tous les comptes","all")
-        for cb in cbs:
-            banque = self.banque_service.get_banque_by_id(cb.id_banque)
-            self.cb_choix_list.addItem(f"{cb.type}, {banque.nom}", cb.id)
-                 
-        self.suppr_objet.hide()
+            self.scenario_label.setText(f"Scénario : {scenario.intitule}")
+                    
+            self.month_visu_input.setText(f"{date_debut.month}")
+            self.year_visu_input.setText(f"{date_debut.year}")
+            
+            self.cb_choix_list.clear()
+            cbs = self.cb_service.all_userCB_from_scenario(scenario.id)
+            self.cb_choix_list.addItem("Tous les comptes","all")
+            for cb in cbs:
+                banque = self.banque_service.get_banque_by_id(cb.id_banque)
+                self.cb_choix_list.addItem(f"{cb.type}, {banque.nom}", cb.id)
+                    
+            self.suppr_objet.hide()
+        else:
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.CB_VISUALIZER)

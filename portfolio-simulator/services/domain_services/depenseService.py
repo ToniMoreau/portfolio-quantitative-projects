@@ -1,25 +1,56 @@
 from repositories import DepenseRepository
-from domain import Depense
+from domain.entities import Depense
+from domain.errors import (
+    DepenseNotFoundError,
+    IntegrityError,
+    MissingColumnError,
+)
 from datetime import date
+
 class DepenseService:
     def __init__(self, depense_repo: DepenseRepository):
         self.depense_repo = depense_repo
         self.natures_customs = ["", "Charges", "Autres"]
-        
+        self.depense_active_id = None
         
     def update_depense(self, depense_id, data, is_transaction : bool | None = None):
-        depense = self.depense_repo.get_by_ID(depense_id)
-        if depense is None:
-            depense = self.depense_repo.create(data, is_transaction)
-        else : self.depense_repo.update(depense.id, data)
-        
-        fresh_depense = self.depense_repo.get_by_ID(depense.id)
+        try:
+            depense = self.depense_repo.get_by_ID(depense_id)
+            if depense is None:
+                depense = self.depense_repo.create(data, is_transaction)
+            else:
+                self.depense_repo.update(depense.id, data)
+            fresh_depense = self.depense_repo.get_by_ID(depense.id)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Depense") from e
+
         if fresh_depense is None:
-            raise ValueError("Metier introuvable après update")
+            raise IntegrityError("Depense introuvable après update")
         return fresh_depense
+    def set_depense_active(self, depense_id):
+        self.depense_active_id = depense_id
     
+    def get_by_criterias(self, dict_bys):
+        try:
+            return self.depense_repo.get_by_(dict_bys)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Depense") from e
+
+    def get_by_scenario(self, id_scenario):
+        try:
+            depenses = self.depense_repo.get_by_({"ID SCENARIO": id_scenario})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Depense") from e
+
+        if depenses is not None:
+            return depenses
+        return None
     def get_by_transaction(self, transaction_id):
-        depense = self.depense_repo.get_by_({"ID TRANSACTION": transaction_id})
+        try:
+            depense = self.depense_repo.get_by_({"ID TRANSACTION": transaction_id})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Depense") from e
+
         if depense is not None:
             return depense[0]
         return None
@@ -30,7 +61,11 @@ class DepenseService:
 
         depenses_totales = []
         for cb_id in cbs_id:
-            depenses = self.depense_repo.get_by_({"ID COMPTE": cb_id})
+            try:
+                depenses = self.depense_repo.get_by_({"ID COMPTE": cb_id})
+            except KeyError as e:
+                raise MissingColumnError(str(e), feuille="Depense") from e
+
             if not(depenses):
                 pass
             elif date_valide is None:
@@ -49,17 +84,32 @@ class DepenseService:
         return depenses_totales
     
     def get_depense_by_id(self, depense_id):
-        return self.depense_repo.get_by_ID(depense_id)
+        try:
+            return self.depense_repo.get_by_ID(depense_id)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Depense") from e
     
-    def delete_depense(self, depense : Depense):
-        if depense is not None:
+    def delete_depense(self, depense_id):
+        depense = self.depense_repo.get_by_ID(depense_id)
+        if depense is None:
+            raise DepenseNotFoundError(depense_id)
+        try:
             self.depense_repo.delete(depense.id)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Depense") from e
     
     def get_loyers_from_scenario(self, scenario_id : int):
-        return self.depense_repo.get_by_({"NATURE": "Loyers", "ID SCENARIO":scenario_id})
+        try:
+            return self.depense_repo.get_by_({"NATURE": "Loyers", "ID SCENARIO":scenario_id})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Depense") from e
     
     def all_userdepense_from_scenario(self, scenario_id) -> list[Depense]:
-        depenses = self.depense_repo.get_by_({"ID SCENARIO": scenario_id})
+        try:
+            depenses = self.depense_repo.get_by_({"ID SCENARIO": scenario_id})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Depense") from e
+
         if depenses is None:
             return []
         return depenses
@@ -70,4 +120,3 @@ class DepenseService:
         for depense in depenses:
             somme += depense.montant
         return somme
-        

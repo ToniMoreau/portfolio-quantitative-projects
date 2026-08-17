@@ -202,7 +202,7 @@ class AjouterCreditPage(QWidget):
             and self.test_limite_duree_input(self.duree_credit_input.text().strip())
             and self.test_limite_montant_input(self.montant_input.text().strip())
         )
-        ok = ok or (self.credit_service.credit_actif is not None)
+        ok = ok or (self.credit_service.credit_actif_id is not None)
 
         self.enregistrer_btn.setEnabled(ok) 
 
@@ -404,9 +404,11 @@ class AjouterCreditPage(QWidget):
             self.mensualite_wgt.hide()    
    
     def update_capa_emprunt(self):
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+
         try:
             date_credit = date(int(self.debut_year_input.text().strip()), int(self.debut_month_input.text().strip()), 1)
-            self.capa_mensu = self.credit_service.capacite_emprunt(self.scenario_service.scenario_actif.id, date_credit)
+            self.capa_mensu = self.credit_service.capacite_emprunt(scenario.id, date_credit)
             
             self.capacite_emprunt.setText(f"Capacité maximum d'emprunt : {euro(self.capa_mensu)}")
             
@@ -424,7 +426,7 @@ class AjouterCreditPage(QWidget):
     def update_choix(self, index):
         banque_name = self.banque_choix.currentText().strip()
         banque = self.banque_service.get_banque_by_name(banque_name)
-        filtre = {"ID USER" : self.session.current_user.id, "ID SCENARIO" : self.scenario_service.scenario_actif.id, "ID BANQUE" : banque.id}
+        filtre = {"ID USER" : self.session.current_user.id, "ID SCENARIO" : self.scenario_service.scenario_actif_id, "ID BANQUE" : banque.id}
         comptes = self.cb_service.all_userCB_from_(filtre)
         self.compte_bancaire_choix.clear()
         self.compte_bancaire_choix.addItem("")
@@ -433,8 +435,7 @@ class AjouterCreditPage(QWidget):
         self.taux_interet.setText(f"Taux d'intérêt : {banque.taux_credit_pct} %")
         
     def enregistrer_clicked(self):
-        credit = self.credit_service.credit_actif
-        
+        credit = self.credit_service.get_credit_by_id(self.credit_service.credit_actif_id)
         banque = self.banque_service.get_banque_by_id(self.banque_choix.currentData())
         
         compte_choix = self.compte_bancaire_choix.currentData()
@@ -490,10 +491,9 @@ class AjouterCreditPage(QWidget):
             data = {}
             data_depense = {}
 
-            
             data["ID COMPTE"] = data_depense["ID COMPTE"] =compte_choix
             data["ID USER"] = data_depense["ID USER"] =self.session.current_user.id
-            data["ID SCENARIO"] =data_depense["ID SCENARIO"] =  self.scenario_service.scenario_actif.id
+            data["ID SCENARIO"] =data_depense["ID SCENARIO"] =  self.scenario_service.scenario_actif_id
             data["MENSUALITE (€)"] = data_depense["MONTANT"]=mensu            
             data["DATE OUT"] = data_depense["DATE OUT"] = date_out
             data_depense["DATE IN"] = add_months(date_in, duree_differee)
@@ -511,44 +511,48 @@ class AjouterCreditPage(QWidget):
             data_depense["FREQUENCE"] = "Mensuel"
             
             credit = self.credit_service.update_credit(id ,data)
+            
             depense_credit = self.depense_service.update_depense(id_depense, data_depense)
             
             self.navigator.go_to(Page.CREDITS)
 
     def load(self):
-        self.scenario_label.setText(f'Scénario : {self.scenario_service.scenario_actif.intitule}')
-        
-        date_credit = self.scenario_service.scenario_actif.date_in
-        self.capa_mensu = self.credit_service.capacite_emprunt(self.scenario_service.scenario_actif.id, date_credit)
-
-        
-        if self.capa_mensu <= 0:
-            self.info_widget.hide()
-            self.capacite_emprunt.setText(f"Votre capacité actuelle ne vous permet pas d'emprunter. Capacité d'emprunt : {self.capa_mensu:.2f} €")
-            self.mlayout.addStretch()
-        else:
-            self.info_widget.show()
-            self.capacite_emprunt.setText(f"Capacité maximum d'emprunt : {self.capa_mensu:.2f} €")
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            self.scenario_label.setText(f'Scénario : {scenario.intitule}')
             
-        self.banque_choix.clear()
-        self.banque_choix.addItem("")
-        for banque in self.banque_service.get_all_banques():
-            self.banque_choix.addItem(banque.nom, banque.id)
+            date_credit = scenario.date_in
+            self.capa_mensu = self.credit_service.capacite_emprunt(scenario.id, date_credit)
 
-        self.taux_interet.setText("Taux d'intérêt : ")
-        self.compte_bancaire_choix.clear()
-        
-        self.type_list.setCurrentIndex(0)
-        
-        self.montant_input.setText("")
-        self.mensualite_input.setText("")
-        self.duree_credit_input.setText("")
-        self.duree_differee_input.setText("")
-        
-        self.mensualite_wgt.hide()
-        self.montant_widget.hide()
-        self.duree_credit_wgt.hide()
-        
-        self.mlayout.addStretch()
-        
-        
+            if self.capa_mensu <= 0:
+                self.info_widget.hide()
+                self.capacite_emprunt.setText(f"Votre capacité actuelle ne vous permet pas d'emprunter. Capacité d'emprunt : {self.capa_mensu:.2f} €")
+                self.mlayout.addStretch()
+            else:
+                self.info_widget.show()
+                self.capacite_emprunt.setText(f"Capacité maximum d'emprunt : {self.capa_mensu:.2f} €")
+                
+            self.banque_choix.clear()
+            self.banque_choix.addItem("")
+            for banque in self.banque_service.get_all_banques():
+                self.banque_choix.addItem(banque.nom, banque.id)
+
+            self.taux_interet.setText("Taux d'intérêt : ")
+            self.compte_bancaire_choix.clear()
+            
+            self.type_list.setCurrentIndex(0)
+            
+            self.montant_input.setText("")
+            self.mensualite_input.setText("")
+            self.duree_credit_input.setText("")
+            self.duree_differee_input.setText("")
+            
+            self.mensualite_wgt.hide()
+            self.montant_widget.hide()
+            self.duree_credit_wgt.hide()
+            
+            self.mlayout.addStretch()
+            
+        else:
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.AJOUTER_CREDIT)

@@ -1,6 +1,6 @@
 
 
-from domain.user import User
+from domain.entities.user import User
 
 class Session:
     def __init__(self):

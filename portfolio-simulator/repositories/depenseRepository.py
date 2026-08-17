@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain import Depense
+from domain.entities import Depense
 
 class DepenseRepository:
     def __init__(self, xlsx_path: str | Path, sheet_name: str = "Dépenses"):
@@ -18,7 +18,7 @@ class DepenseRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID DEPENSE", "ID SCENARIO", "ID USER", "ID COMPTE", "INTITULE", "MONTANT", "FREQUENCE", "NATURE"
+                    "ID DEPENSE", "ID TRANSACTION", "ID SCENARIO", "ID USER", "ID COMPTE", "ID SOURCE", "DATE IN", "DATE OUT", "INTITULE", "NATURE", "MONTANT", "FREQUENCE", "INDEXATION"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)
@@ -59,7 +59,7 @@ class DepenseRepository:
                 intitule= s(row["INTITULE"]),
                 id_compte= int(row["ID COMPTE"]),
                 id_scenario= int(row["ID SCENARIO"]),
-                id_investissement= None if pd.isna(row.get("ID INVEST")) else int(row["ID INVEST"]),
+                id_source= None if pd.isna(row.get("ID SOURCE")) else int(row["ID SOURCE"]),
                 frequence= s(row["FREQUENCE"]),
                 nature= s(row["NATURE"]),
                 montant= float(row["MONTANT"]),
@@ -111,12 +111,13 @@ class DepenseRepository:
         if is_transaction:
             next_ID = int(df["ID TRANSACTION"].max()) + 1 if (len(df) and df["ID TRANSACTION"].notna().any()) else 1
             depense["ID TRANSACTION"] = next_ID
-        
+        new_id =depense["ID DEPENSE"]
         depense = pd.DataFrame([depense])
         df = pd.concat([df, depense ], ignore_index=True)
         self._save_df(df)
         
-        return self._rows_to_depense(depense)[0]
+        saved_row = df[df["ID DEPENSE"] == new_id]
+        return self._rows_to_depense(saved_row)[0]
 
     def update(self, depense_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()

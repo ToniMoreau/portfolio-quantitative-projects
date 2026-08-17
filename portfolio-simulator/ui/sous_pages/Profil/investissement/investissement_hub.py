@@ -3,11 +3,11 @@
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QIntValidator, QDoubleValidator
 from PySide6.QtWidgets import (
-    QTableWidget, QTableWidgetItem,
+    QMessageBox, QTableWidget, QTableWidgetItem,
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
 
-from services import AppContext, Page
+from services import AppContext, Page, PatrimoineService
 from session import Session
 
 from utils.finance_format import euro
@@ -15,10 +15,14 @@ from utils.date import month_count
 from datetime import date
 from .nouveau_projet_page import NouveauProjetPage
 from .infos_projet_page import InfosProjetPage
+from domain.enums import investType
+from ui.widgets import confirm_and_delete
+from domain.errors import *
 
 class InvestissementHubPage(QWidget):
     def __init__(self, appContext : AppContext, session : Session):
         super().__init__()
+        self.patrimoine_service = appContext.patrimoine_service
         self.scenario_service = appContext.scenario_service
         self.invest_service = appContext.invest_service
         self.credit_service = appContext.credit_service
@@ -117,6 +121,8 @@ class InvestissementHubPage(QWidget):
         return page
     
     def vendre_clicked(self):
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+
         invest_row = self.invest_tab.currentRow()
         invest_id = self.invest_tab.item(invest_row, 0).data(1)
         if invest_id is not None:
@@ -128,29 +134,30 @@ class InvestissementHubPage(QWidget):
                 month = int(month)
                 year = int(year)
                 date_vente = date(year, month, 1)
-                if invest.date_in <= date_vente and date_vente <= self.scenario_service.scenario_actif.date_limite:
+                if invest.date_in <= date_vente and date_vente <= scenario.date_limite:
                     data_recette = {}
                     data_recette["DATE IN"] = data_recette["DATE OUT"] = date_vente
-                    data_recette["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+                    data_recette["ID SCENARIO"] = self.scenario_service.scenario_actif_id
                     data_recette["ID USER"] = self.session.current_user.id
                     data_recette["ID COMPTE"] = invest.id_compte
                     data_recette["INTITULE"] = f"Vente {invest.titre}"
-                    data_recette["ID INVEST"] = invest.id
+                    data_recette["ID SOURCE"] = invest.id
                     data_recette["NATURE"] = "Investissement"
                     data_recette["MONTANT"] = invest.prix_vente(date_vente)
                     data_recette["FREQUENCE"] = "Ponctuel"
                     
                     achat= self.recette_service.update_recette(None, data_recette)
                     self.invest_service.update_investissement(invest.id, {"ID VENTE" : achat.id, "ETAT" : "vendu", "DATE VENTE" : date_vente})
-                    if invest.nature == "Stock" and invest.id_dividendes is not None:
+                    if invest.nature == investType.STOCK and invest.id_dividendes is not None:
                         dividendes = self.recette_service.update_recette(invest.id_dividendes, {"DATE OUT" : date_vente})
-                    elif invest.nature == "Immobilier":
+                    elif invest.nature == investType.IMMO:
                         self.recette_service.update_location_from_vente_immo(invest.id, date_vente)                    
                     self.load()
                     
             return
     
     def conclure_clicked(self):
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
         invest_row = self.invest_tab.currentRow()
         invest_id = self.invest_tab.item(invest_row, 0).data(1)
         print(invest_id)
@@ -160,13 +167,14 @@ class InvestissementHubPage(QWidget):
                 data_depense = {}
                 
                 data_depense["DATE IN"] = data_depense["DATE OUT"] = invest.date_in
-                data_depense["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+                data_depense["ID SCENARIO"] = self.scenario_service.scenario_actif_id
                 data_depense["ID USER"] = self.session.current_user.id
                 data_depense["ID COMPTE"] = invest.id_compte
                 data_depense["INTITULE"] = f"Achat {invest.titre}"
                 data_depense["NATURE"] = "Investissement"
                 data_depense["MONTANT"] = invest.prix_achat
                 data_depense["FREQUENCE"] = "Ponctuel"
+                data_depense["ID SOURCE"] = invest.id
                 
                 achat= self.depense_service.update_depense(None, data_depense)
                 self.invest_service.update_investissement(invest.id, {"ID ACHAT" : achat.id, "ETAT" : "actif"})
@@ -174,14 +182,15 @@ class InvestissementHubPage(QWidget):
                     data_dividendes = {}
                     
                     data_dividendes["DATE IN"] = invest.date_in
-                    data_dividendes["DATE OUT"] = self.scenario_service.scenario_actif.date_limite
-                    data_dividendes["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+                    data_dividendes["DATE OUT"] = scenario.date_limite
+                    data_dividendes["ID SCENARIO"] = self.scenario_service.scenario_actif_id
                     data_dividendes["ID USER"] = self.session.current_user.id
                     data_dividendes["ID COMPTE"] = invest.id_compte
                     data_dividendes["INTITULE"] = f"Dividendes {invest.titre}"
                     data_dividendes["NATURE"] = "Investissement"
                     data_dividendes["MONTANT"] = invest.dividendes_montant()
                     data_dividendes["FREQUENCE"] = "Annuel"
+                    data_dividendes["ID SOURCE"] = invest.id
                     
                     divids= self.recette_service.update_recette(None, data_dividendes)
                     self.invest_service.update_investissement(invest.id, {"ID DIVIDENDES" : divids.id})
@@ -216,17 +225,17 @@ class InvestissementHubPage(QWidget):
             self.invest_service.set_invest_actif(invest_id)
             if invest.etat =="à créditer":
                 self.credit_btn.show()
-                self.supprimer_btn.show()
             elif invest.etat == "à conclure":
                 self.conclure_btn.show()
             elif invest.etat =="actif":
                 self.vendre_btn.show()
             else:
                 return
-        
+        self.supprimer_btn.show()
         return
     
     def suppr_clicked(self):
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
         item_row = self.invest_tab.currentRow()
         if item_row <0:
             return
@@ -234,66 +243,74 @@ class InvestissementHubPage(QWidget):
         if item_ref is None:
             return
         invest = self.invest_service.get_by_id(item_ref.data(1))
-        if invest is not None and invest.etat == "à créditer":
-            self.invest_service.delete_invest(invest.id)
-        self.load()
-
+        if invest is None:
+            QMessageBox.warning(self, "Erreur.", "Aucun investissement sélectionné.")
+            return
+        try:
+            if confirm_and_delete(self.patrimoine_service,scenario, invest, self):
+                self.load()
+        except QuantFolioError as e:
+            QMessageBox.critical(self, "Suppression impossible :", str(e))
+        
     def load(self):
         print("j'ai load")
-        scenario = self.scenario_service.scenario_actif
-        
-        month = self.month_input.text().strip()
-        year = self.year_input.text().strip()
-        if month and year:
-            date_seuil = date(int(year), int(month), 1)
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            month = self.month_input.text().strip()
+            year = self.year_input.text().strip()
+            if month and year:
+                date_seuil = date(int(year), int(month), 1)
+            else:
+                self.month_input.setText(str(scenario.date_in.month))
+                self.year_input.setText(str(scenario.date_in.year))
+                
+                date_seuil = scenario.date_in
+            invests = self.invest_service.get_by_scenario(scenario.id) or []
+
+            self.invest_tab.setRowCount(len(invests))
+            for i,invest in enumerate(invests):
+                if invest.date_in <= date_seuil:
+                    print("invest 1")
+                    
+                    nature_item = QTableWidgetItem(str(invest.nature))
+                    nature_item.setData(1,invest.id)
+                    self.invest_tab.setItem(i,0, nature_item)
+                    
+                    if invest.nature == investType.IMMO:
+                        self.invest_tab.setItem(i,1, QTableWidgetItem(str(invest.titre)))
+                        self.invest_tab.setItem(i,2, QTableWidgetItem(str(invest.date_in)))
+                        self.invest_tab.setItem(i,3, QTableWidgetItem(str(euro(invest.prix_achat))))
+                        self.invest_tab.setItem(i,5, QTableWidgetItem(str(euro(invest.present_value(date_seuil)))))
+                        self.invest_tab.setItem(i,6, QTableWidgetItem(str(euro(invest.apport_personnel))))
+                        credit = self.credit_service.get_credit_by_id(invest.id_credit)
+                        if credit is not None:
+                            self.invest_tab.setItem(i,4, QTableWidgetItem(str(euro(credit.present_value()+invest.prix_achat-credit.montant))))
+
+                            montant_credit_restant = credit.credit_restant_from_date(date_seuil)
+                            duree_credit_restante = credit.duree_restante_from_date(date_seuil)
+                            self.invest_tab.setItem(i,7, QTableWidgetItem(str(euro(montant_credit_restant))))
+                            self.invest_tab.setItem(i,8, QTableWidgetItem(str((duree_credit_restante))))
+                        
+                        self.invest_tab.setItem(i,9, QTableWidgetItem(str(invest.date_out) or ""))
+                        self.invest_tab.setItem(i,10, QTableWidgetItem(str(euro(invest.prix_vente(date_seuil)))))
+                        self.invest_tab.setItem(i,11, QTableWidgetItem(str(invest.etat)))
+                    elif invest.nature == investType.STOCK:
+                        self.invest_tab.setItem(i,1, QTableWidgetItem(str(invest.titre)))
+                        self.invest_tab.setItem(i,2, QTableWidgetItem(str(invest.date_in)))
+                        self.invest_tab.setItem(i,3, QTableWidgetItem(str(euro(invest.prix_achat))))
+                        self.invest_tab.setItem(i,5, QTableWidgetItem(str(euro(invest.present_value(date_seuil)))))
+                        
+                        self.invest_tab.setItem(i,9, QTableWidgetItem(str(invest.date_out) or ""))
+                        self.invest_tab.setItem(i,10, QTableWidgetItem(str(euro(invest.prix_vente(date_seuil)))))
+                        self.invest_tab.setItem(i,11, QTableWidgetItem(str(invest.etat)))
+                    
+            self.conclure_btn.hide()
+            self.credit_btn.hide()
+            self.infos_btn.hide()
+            self.vendre_btn.hide()
+            self.supprimer_btn.hide()
+            self.invest_service.set_invest_actif(None)
+                
         else:
-            self.month_input.setText(str(scenario.date_in.month))
-            self.year_input.setText(str(scenario.date_in.year))
-            
-            date_seuil = scenario.date_in
-        invests = self.invest_service.get_by_scenario(scenario.id) or []
-
-        self.invest_tab.setRowCount(len(invests))
-        for i,invest in enumerate(invests):
-            if invest.date_in <= date_seuil:
-                print("invest 1")
-                
-                nature_item = QTableWidgetItem(str(invest.nature))
-                nature_item.setData(1,invest.id)
-                self.invest_tab.setItem(i,0, nature_item)
-                
-                if invest.nature == "Immobilier":
-                    self.invest_tab.setItem(i,1, QTableWidgetItem(str(invest.titre)))
-                    self.invest_tab.setItem(i,2, QTableWidgetItem(str(invest.date_in)))
-                    self.invest_tab.setItem(i,3, QTableWidgetItem(str(euro(invest.prix_achat))))
-                    self.invest_tab.setItem(i,5, QTableWidgetItem(str(euro(invest.present_value(date_seuil)))))
-                    self.invest_tab.setItem(i,6, QTableWidgetItem(str(euro(invest.paiement_comptant()))))
-                    credit = self.credit_service.get_credit_by_id(invest.id_credit)
-                    if credit is not None:
-                        self.invest_tab.setItem(i,4, QTableWidgetItem(str(euro(credit.present_value()+invest.prix_achat-credit.montant))))
-
-                        montant_credit_restant = credit.credit_restant_from_date(date_seuil)
-                        duree_credit_restante = credit.duree_restante_from_date(date_seuil)
-                        self.invest_tab.setItem(i,7, QTableWidgetItem(str(euro(montant_credit_restant))))
-                        self.invest_tab.setItem(i,8, QTableWidgetItem(str((duree_credit_restante))))
-                    
-                    self.invest_tab.setItem(i,9, QTableWidgetItem(str(invest.date_out) or ""))
-                    self.invest_tab.setItem(i,10, QTableWidgetItem(str(euro(invest.prix_vente(date_seuil)))))
-                    self.invest_tab.setItem(i,11, QTableWidgetItem(str(invest.etat)))
-                elif invest.nature == "Stock":
-                    self.invest_tab.setItem(i,1, QTableWidgetItem(str(invest.titre)))
-                    self.invest_tab.setItem(i,2, QTableWidgetItem(str(invest.date_in)))
-                    self.invest_tab.setItem(i,3, QTableWidgetItem(str(euro(invest.prix_achat))))
-                    self.invest_tab.setItem(i,5, QTableWidgetItem(str(euro(invest.present_value(date_seuil)))))
-                    
-                    self.invest_tab.setItem(i,9, QTableWidgetItem(str(invest.date_out) or ""))
-                    self.invest_tab.setItem(i,10, QTableWidgetItem(str(euro(invest.prix_vente(date_seuil)))))
-                    self.invest_tab.setItem(i,11, QTableWidgetItem(str(invest.etat)))
-                
-        self.conclure_btn.hide()
-        self.credit_btn.hide()
-        self.infos_btn.hide()
-        self.vendre_btn.hide()
-        self.supprimer_btn.hide()
-        self.invest_service.set_invest_actif(None)
-                
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.INVESTISSEMENT_HUB)

@@ -3,7 +3,7 @@
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QIntValidator, QDoubleValidator
 from PySide6.QtWidgets import (
-    QTableWidget, QTableWidgetItem,
+    QMessageBox, QTableWidget, QTableWidgetItem,
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
 
@@ -13,6 +13,7 @@ from session import Session
 from utils.finance_format import euro
 from utils.date import month_count
 from datetime import date
+from domain.errors import *
 
 class MonDomicilePage(QWidget):
     def __init__(self, appContext : AppContext, session : Session):
@@ -73,15 +74,17 @@ class MonDomicilePage(QWidget):
         self.right_btns_lyt = QHBoxLayout(right_btns_wgt)
         self.infos_btn = QPushButton("+ d'infos")
         self.retour_btn = QPushButton("Retour <-")
+        self.modifier_btn = QPushButton("Modifier")
         self.supprimer_btn = QPushButton("Supprimer")
         
         self.btns_lyt.addWidget(left_btns_wgt)
         self.left_btns_lyt.addWidget(self.nouvelle_location_btn)
-
+    
         self.btns_lyt.addStretch()
         
         self.btns_lyt.addWidget(right_btns_wgt)
         self.right_btns_lyt.addWidget(self.infos_btn)
+        self.right_btns_lyt.addWidget(self.modifier_btn)
         self.right_btns_lyt.addWidget(self.supprimer_btn)
         
         layout.addWidget(self.title)
@@ -92,6 +95,7 @@ class MonDomicilePage(QWidget):
         layout.addStretch()
         layout.addWidget(self.retour_btn)
         
+        self.modifier_btn.clicked.connect(self.modifier_clicked)
         self.supprimer_btn.clicked.connect(self.suppr_clicked)
         self.nouvelle_location_btn.clicked.connect(lambda: self.navigator.go_to(Page.NOUVELLE_LOCATION))
         self.retour_btn.clicked.connect(lambda : self.navigator.go_to(Page.LOGEMENTS))
@@ -101,52 +105,72 @@ class MonDomicilePage(QWidget):
     
     def loyer_clicked(self, row, col):
         self.supprimer_btn.show()
+    
+    def modifier_clicked(self):
+        current_row = self.loyer_tab.currentRow()
+        if current_row<0:
+            return
+        current_item = self.loyer_tab.item(current_row, 0)
+        if current_item is None:
+            return
+        loyer = self.depense_service.get_depense_by_id(current_item.data(1))
+        if loyer is not None:
+            self.depense_service.set_depense_active(loyer.id)
+            self.navigator.go_to(Page.NOUVELLE_LOCATION)
         
     def suppr_clicked(self):
-        print("suppr clicked")
         item_row = self.loyer_tab.currentRow()
-        print("ir", item_row)
-        
-        if item_row <0:
+        if item_row < 0:
             return
         item_ref = self.loyer_tab.item(item_row, 0)
-        print(item_ref)
         if item_ref is None:
             return
-        print(item_ref.data(1))
-        loyer = self.depense_service.get_depense_by_id(item_ref.data(1))
-        print(loyer)
-        if loyer is not None:
-            self.depense_service.delete_depense(loyer)
-        self.load()
+        loyer_id = item_ref.data(1)
 
+        try:
+            loyer = self.depense_service.get_depense_by_id(loyer_id)
+            if loyer is None:
+                QMessageBox.warning(self, "Erreur", "Aucun élément sélectionné.")
+                return
+
+            self.depense_service.delete_depense(loyer_id)
+            self.load()
+
+        except QuantFolioError as e:
+            QMessageBox.critical(self, "Suppression impossible", str(e))
+            
     def load(self):
-        scenario = self.scenario_service.scenario_actif
-        
-        loyers = self.depense_service.get_loyers_from_scenario(scenario.id) or []
-        
-        month = self.month_input.text().strip()
-        year = self.year_input.text().strip()
-        if month and year:
-            date_seuil = date(int(year), int(month), 1)
-        else:
-            self.month_input.setText(str(scenario.date_in.month))
-            self.year_input.setText(str(scenario.date_in.year))
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            self.modifier_btn.hide()
+            self.depense_service.set_depense_active(None)
+            loyers = self.depense_service.get_loyers_from_scenario(scenario.id) or []
             
-            date_seuil = scenario.date_in
-            
-        self.loyer_tab.setRowCount(len(loyers))
-        
-        for i,loyer in enumerate(loyers):
-            if loyer.date_in <= date_seuil:
-                intitule = QTableWidgetItem(str(loyer.intitule))
-                intitule.setData(1,loyer.id)
+            month = self.month_input.text().strip()
+            year = self.year_input.text().strip()
+            if month and year:
+                date_seuil = date(int(year), int(month), 1)
+            else:
+                self.month_input.setText(str(scenario.date_in.month))
+                self.year_input.setText(str(scenario.date_in.year))
                 
-                self.loyer_tab.setItem(i,0, intitule)
-                self.loyer_tab.setItem(i,1, QTableWidgetItem(str(loyer.date_in)))
-                self.loyer_tab.setItem(i,2, QTableWidgetItem(str(loyer.date_out)))
-                self.loyer_tab.setItem(i,3, QTableWidgetItem(str(euro(loyer.montant))))
+                date_seuil = scenario.date_in
+                
+            self.loyer_tab.clear()
+            self.loyer_tab.setRowCount(len(loyers))
+            self.loyer_tab.clear()
+            for i,loyer in enumerate(loyers):
+                if loyer.date_in <= date_seuil:
+                    intitule = QTableWidgetItem(str(loyer.intitule))
+                    intitule.setData(1,loyer.id)
+                    
+                    self.loyer_tab.setItem(i,0, intitule)
+                    self.loyer_tab.setItem(i,1, QTableWidgetItem(str(loyer.date_in)))
+                    self.loyer_tab.setItem(i,2, QTableWidgetItem(str(loyer.date_out)))
+                    self.loyer_tab.setItem(i,3, QTableWidgetItem(str(euro(loyer.montant))))
 
-        self.infos_btn.hide()
-        self.supprimer_btn.hide()
-                
+            self.infos_btn.hide()
+            self.supprimer_btn.hide()
+        else:
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.MON_DOMICILE)

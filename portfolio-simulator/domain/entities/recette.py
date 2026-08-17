@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from datetime import date
+from domain.enums import DependentType
 @dataclass
-class Depense:
+class Recette:
     id : int
     intitule : str
     montant : float
@@ -13,12 +14,13 @@ class Depense:
     id_user : int
     id_compte : int
 
-    date_in:date 
+    date_in:date
     date_out:date
     
-    id_investissement : int | None = None
     id_transaction : int | None = None
-
-
+    id_source : int | None = None
     
+    def get_dependent_type(self):
+        return DependentType.RECETTE
+
     

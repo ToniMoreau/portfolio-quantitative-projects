@@ -67,8 +67,8 @@ class AjouterCompteBancairePage(QWidget):
         self.enregistrer_btn.clicked.connect(self.enregistrer_clicked)
         
     def enregistrer_clicked(self):
-        cb = self.cb_service.cb_actif 
-        print("cb_actif = ", cb)
+        cb = self.cb_service.get_cb_by_id(self.cb_service.cb_actif_id)
+        scenario= self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)
         
         banque_choix = self.banque_choix.currentText().strip()
         banque = self.banque_service.get_banque_by_name(banque_choix)
@@ -78,7 +78,7 @@ class AjouterCompteBancairePage(QWidget):
         
         if cb:
             id = cb.id
-            recette = self.recette_service.get_by_(dict_bys={"ID COMPTE" : id,"NATURE" : "Dépots"})
+            recette = self.recette_service.get_by_criterias(dict_bys={"ID COMPTE" : id,"NATURE" : "Dépots"})
             id_recette = None if recette is None else recette.pop().id
             id_banque = cb.id_banque if not(banque) else int(banque.id)
             type = cb.type if not(type) else str(type)
@@ -101,7 +101,7 @@ class AjouterCompteBancairePage(QWidget):
             
             data["ID BANQUE"] = id_banque
             data["ID USER"] = self.session.current_user.id
-            data["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+            data["ID SCENARIO"] = scenario.id
             data["SOLDE INITIAL"] = montant            
             data["TYPE"] = type
             data["RENDEMENT (%/AN)"] = taux_crediteur
@@ -111,9 +111,9 @@ class AjouterCompteBancairePage(QWidget):
             data_recette = {}
             data_recette["ID COMPTE"] = cb.id
             data_recette["ID USER"] = self.session.current_user.id
-            data_recette["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+            data_recette["ID SCENARIO"] = scenario.id
             data_recette["MONTANT"] = montant
-            data_recette["DATE IN"] = data_recette["DATE OUT"] = self.scenario_service.scenario_actif.date_in            
+            data_recette["DATE IN"] = data_recette["DATE OUT"] =scenario.date_in            
             data_recette["INTITULE"] = "Ouverture compte"
             data_recette["NATURE"] = "Dépots"
             data_recette["FREQUENCE"] = "Ponctuel"
@@ -122,10 +122,16 @@ class AjouterCompteBancairePage(QWidget):
             self.navigator.go_to(Page.COMPTES_BANCAIRES)
 
     def load(self):
-        self.banque_choix.clear()
-        self.banque_choix.addItem("")
-        self.banque_choix.addItems(self.banque_service.get_all_banque_names())
-        self.type.setText("")
-        self.taux_crediteur_input.setText("")
-        self.montant.setText("")
-        self.scenario_label.setText(f"Scénario : {self.scenario_service.scenario_actif.intitule}")
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)
+        if scenario:
+            self.banque_choix.clear()
+            self.banque_choix.addItem("")
+            self.banque_choix.addItems(self.banque_service.get_all_banque_names())
+            self.type.setText("")
+            self.taux_crediteur_input.setText("")
+            self.montant.setText("")
+            self.scenario_label.setText(f"Scénario : {scenario.intitule}")
+        else:
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.AJOUTER_COMPTE_BANCAIRE)
+            

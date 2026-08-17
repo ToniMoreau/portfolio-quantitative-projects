@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain.profil_pro import Profil_pro, Salarié
+from domain.entities.profil_pro import Profil_pro, Salarié
 class MetierRepository:
     def __init__(self, xlsx_path: str | Path, sheet_name: str = "Metiers"):
         self.xlsx_path = Path(xlsx_path)
@@ -17,8 +17,7 @@ class MetierRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID METIER", "ID SCENARIO","ID USER", "ID COMPTE", "INTITULE", "ANCIENNETE (ANNEE)", "ANNUEL BRUT (€/AN)", "ANNUEL NET (€/AN)", 
-                    "PRIMES (€/AN) ", "BONUS (%/AN)", "AUGMENTATION  (%/AN)", "FREQUENCE 1 (ANNEE)", "AUGMENT. (%/F1)", "PRIVE"
+                    "ID METIER", "ID SCENARIO","ID USER", "ID COMPTE", "DATE IN", "DATE OUT", "INTITULE", "ANNUEL BRUT (€/AN)", "ANNUEL NET (€/AN)", "PAS (%)", "PRIVE"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)
@@ -54,10 +53,9 @@ class MetierRepository:
 
         for _, row in rows.iterrows():
             profil_pro = Salarié(
-            id_metier=int(row["ID METIER"]),
+            id=int(row["ID METIER"]),
             intitule_métier= s(row["INTITULE"]),
             id_compte= int(row["ID COMPTE"]),
-            id_recette= int(row["ID SALAIRE"]), #
             annuel_brut= float(row["ANNUEL BRUT (€/AN)"]),
             privé= s(row["PRIVE"]),
             date_in= row["DATE IN"],
@@ -106,10 +104,13 @@ class MetierRepository:
         if "ID METIER" not in metier or metier["ID METIER"] is None:
             next_ID = int(df["ID METIER"].max()) + 1 if (len(df) and df["ID METIER"].notna().any()) else 1
             metier["ID METIER"] = next_ID
+            
+        new_id =metier["ID METIER"]
         metier = pd.DataFrame([metier])
         df = pd.concat([df, metier], ignore_index=True)
         self._save_df(df)
-        return self._row_to_profils_pros(metier)[0]
+        saved_row = df[df["ID METIER"] == new_id]
+        return self._row_to_profils_pros(saved_row)[0]
 
     def update(self, metier_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()

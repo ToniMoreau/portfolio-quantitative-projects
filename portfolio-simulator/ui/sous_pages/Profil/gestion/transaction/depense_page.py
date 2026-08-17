@@ -147,7 +147,7 @@ class AjouterDepensePage(QWidget):
             data = {}
             data["ID COMPTE"] = compte_choix
             data["ID USER"] = self.session.current_user.id
-            data["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+            data["ID SCENARIO"] = self.scenario_service.scenario_actif_id
             data["INTITULE"] = intitule
             data["FREQUENCE"] = freq_choix
             data["MONTANT"] = montant
@@ -159,17 +159,23 @@ class AjouterDepensePage(QWidget):
             self.navigator.go_to(Page.TRANSACTIONS)
 
     def load(self):
-        self.compte_bancaire_choix.clear()
-        for cb in self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif.id):
-            banque = self.banque_service.get_banque_by_id(cb.id_banque)
-            self.compte_bancaire_choix.addItem(f"{cb.type, banque.nom}", cb.id)
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            self.compte_bancaire_choix.clear()
+            for cb in self.cb_service.all_userCB_from_scenario(scenario.id):
+                banque = self.banque_service.get_banque_by_id(cb.id_banque)
+                self.compte_bancaire_choix.addItem(f"{cb.type, banque.nom}", cb.id)
+                
+            self.montant.setText("")
+            self.intitule.setText("")
+            self.frequence_choix.setCurrentIndex(0)
             
-        self.montant.setText("")
-        self.intitule.setText("")
-        self.frequence_choix.setCurrentIndex(0)
+            self.debut_month_input.setText("")
+            self.debut_year_input.setText("")
+            self.fin_month_input.setText("")
+            self.fin_year_input.setText("")
+            self.scenario_label.setText(f'Scénario : {scenario.intitule}')
+        else: 
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.DEPENSE)
         
-        self.debut_month_input.setText("")
-        self.debut_year_input.setText("")
-        self.fin_month_input.setText("")
-        self.fin_year_input.setText("")
-        self.scenario_label.setText(f'Scénario : {self.scenario_service.scenario_actif.intitule}')

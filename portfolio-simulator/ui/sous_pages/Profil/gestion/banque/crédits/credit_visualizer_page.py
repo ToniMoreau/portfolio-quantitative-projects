@@ -95,17 +95,20 @@ class CréditVisualizerPage(QWidget):
 
         
     def load(self):
-        scenario = self.scenario_service.scenario_actif
-        self.scenario_label.setText(f"Scénario : {scenario.intitule}")
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            self.scenario_label.setText(f"Scénario : {scenario.intitule}")
         
-        self.amorti_table.clear()   
-        self.choix_credit.clear()
-        
-        credits = self.credit_service.get_all_credits_from_scenario(scenario.id)
-        
-        for cred in credits:
-            banque = self.banque_service.get_banque_by_id(cred.id_banque)
-            self.choix_credit.addItem(f"{cred.montant}, {banque.nom}", cred.id)
-                
+            self.amorti_table.clear()   
+            self.choix_credit.clear()
+            
+            credits = self.credit_service.get_all_credits_from_scenario(scenario.id)
+            
+            for cred in credits:
+                banque = self.banque_service.get_banque_by_id(cred.id_banque)
+                self.choix_credit.addItem(f"{cred.montant}, {banque.nom}", cred.id)
+        else:
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.CREDIT_VISUALIZER)
 
 

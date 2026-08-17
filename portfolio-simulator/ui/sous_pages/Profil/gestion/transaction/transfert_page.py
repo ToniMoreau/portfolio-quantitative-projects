@@ -135,7 +135,7 @@ class TransfertPage(QWidget):
         else:
             data = {}
             data["ID COMPTE"] = id_credite
-            data["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+            data["ID SCENARIO"] = self.scenario_service.scenario_actif_id
             data["ID USER"] = self.session.current_user.id
             data["MONTANT"] = montant
             data["FREQUENCE"] = frequence
@@ -152,25 +152,29 @@ class TransfertPage(QWidget):
             self.navigator.go_to(Page.TRANSACTIONS)
     
     def load(self):
-        scenario = self.scenario_service.scenario_actif
-        self.scenario_label.setText(f"Scénario : {scenario.intitule}")
-        
-        self.emmeteur_input.clear()
-        self.destinataire_input.clear()
-        self.emmeteur_input.addItem("")
-        self.destinataire_input.addItem("")
-        cbs = self.cb_service.all_userCB_from_scenario(scenario.id)
-        for cb in cbs:
-            banque = self.banque_service.get_banque_by_id(cb.id_banque)
-            montant = self.cb_service.solde_from_cb(scenario.date_in,cb.id, scenario.date_in)
-            self.emmeteur_input.addItem(f"[{banque.nom}] {cb.type} : {euro(montant)}", cb.id)
-            self.destinataire_input.addItem(f"[{banque.nom}] {cb.type} : {euro(montant)}", cb.id)
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)
+        if scenario:   
+            self.scenario_label.setText(f"Scénario : {scenario.intitule}")
+            
+            self.emmeteur_input.clear()
+            self.destinataire_input.clear()
+            self.emmeteur_input.addItem("")
+            self.destinataire_input.addItem("")
+            cbs = self.cb_service.all_userCB_from_scenario(scenario.id)
+            for cb in cbs:
+                banque = self.banque_service.get_banque_by_id(cb.id_banque)
+                montant = self.cb_service.solde_from_cb(scenario.date_in,cb.id, scenario.date_in)
+                self.emmeteur_input.addItem(f"[{banque.nom}] {cb.type} : {euro(montant)}", cb.id)
+                self.destinataire_input.addItem(f"[{banque.nom}] {cb.type} : {euro(montant)}", cb.id)
 
-        self.montant_input.clear()
-        self.frequence_input.setCurrentIndex(0)
-        self.nature_input.setCurrentIndex(0)
-        self.intitule_input.clear()
-        self.month_debut_input.clear()
-        self.month_fin_input.clear()
-        self.year_debut_input.clear()
-        self.year_fin_input.clear()
+            self.montant_input.clear()
+            self.frequence_input.setCurrentIndex(0)
+            self.nature_input.setCurrentIndex(0)
+            self.intitule_input.clear()
+            self.month_debut_input.clear()
+            self.month_fin_input.clear()
+            self.year_debut_input.clear()
+            self.year_fin_input.clear()
+        else: 
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.TRANSACTIONS)

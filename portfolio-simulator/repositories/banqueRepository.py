@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain.banque import Banque
+from domain.entities.banque import Banque
 
 
 
@@ -98,10 +98,13 @@ class BanqueRepository:
         if "ID BANQUE" not in banque or banque["ID BANQUE"] is None:
             next_ID = int(df["ID BANQUE"].max()) + 1 if (len(df) and df["ID BANQUE"].notna().any()) else 1
             banque["ID BANQUE"] = next_ID
+            
+        new_id =banque["ID BANQUE"]
         banque = pd.DataFrame([banque])
         df = pd.concat([df, banque], ignore_index=True)
         self._save_df(df)
-        return self._row_to_banques(banque)[0]
+        saved_row = df[df["ID BANQUE"] ==new_id ]
+        return self._row_to_banques(saved_row)[0]
 
     def update(self, banque_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()

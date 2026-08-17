@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain.user import User
+from domain.entities.user import User
 
 
 class UserRepository:
@@ -19,7 +19,7 @@ class UserRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID", "username", "password_hash", "name", "email"
+                    "ID", "username", "firstname", "lastname", "email", "password", "age"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)

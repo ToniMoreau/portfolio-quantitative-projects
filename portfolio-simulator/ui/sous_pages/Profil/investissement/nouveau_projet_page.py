@@ -14,7 +14,14 @@ from utils.finance_format import euro
 from datetime import date
 from services import AppContext, Page
 from session import Session
+from domain.enums import investType
 
+from domain.errors import (
+    SoldeInsuffisantError, 
+    ScenarioNotFoundError, 
+    NegativeAmountError, 
+    QuantFolioError,
+)
 class NouveauProjetPage(QWidget):
     back_to_hub = Signal()
     
@@ -37,11 +44,7 @@ class NouveauProjetPage(QWidget):
         
         type_lbl = QLabel("Type d'investissement : ")
         self.type_box = QComboBox()
-        self.type_box.addItems([
-            "", 
-            "Immobilier",
-            "Stock"
-        ])
+        self.type_box.addItems([t.value for t in investType])
         self.type_box.currentTextChanged.connect(self.update_type_invest)
         
         type_lyt.addWidget(type_lbl)
@@ -82,7 +85,7 @@ class NouveauProjetPage(QWidget):
         prix_achat_lbl = QLabel("Montant")
         self.prix_achat_input = QLineEdit()
         self.prix_achat_input.setPlaceholderText("€")
-        self.prix_achat_input.setValidator(QDoubleValidator(0,1_000_000,2))
+        self.prix_achat_input.setValidator(QDoubleValidator(0,1_000_000_000,2))
         
         prix_achat_lyt.addWidget(prix_achat_lbl)
         prix_achat_lyt.addWidget(self.prix_achat_input)
@@ -188,7 +191,7 @@ class NouveauProjetPage(QWidget):
         common_lyt.addWidget(self.quel_compte_wgt)
         immo_lyt.addWidget(self.comptant_widget)
         common_lyt.addWidget(self.valo_wgt)
-        common_lyt.addWidget(self.dividendes_wgt)
+        stock_lyt.addWidget(self.dividendes_wgt)
         immo_lyt.addWidget(self.immo_details_wgt)
                 
         #---MAINE LAYERING---------------------------------------#
@@ -214,9 +217,9 @@ class NouveauProjetPage(QWidget):
     
     def update_type_invest(self):
         curr_text =self.type_box.currentText().strip() 
-        if curr_text == "Immobilier":
+        if curr_text == investType.IMMO:
             self.immo_mode()
-        elif curr_text == "Stock":
+        elif curr_text == investType.STOCK:
             self.stock_mode()
         else:
             self.default_mode()
@@ -233,29 +236,30 @@ class NouveauProjetPage(QWidget):
         self.immo_wgt.hide()
         self.stock_wgt.show()
         self.common_wgt.show()
-        
+    
+    
     def update_comptes_from_date(self):
         print("updating...")
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
         month = self.month_achat_input.text().strip()
         year = self.year_achat_input.text().strip()
         if month and year:
-            scenario = self.scenario_service.scenario_actif
             date_solde_comptes = date(int(year), int(month), 1)
             if scenario.date_in <= date_solde_comptes <= scenario.date_limite:
-                cbs = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif.id)
+                cbs = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif_id)
                 self.quel_compte_box.clear()
                 for cb in cbs:
                     banque = self.banque_service.get_banque_by_id(cb.id_banque)
-                    self.quel_compte_box.addItem(f"{cb.type} | {banque.nom} | {euro(self.cb_service.solde_from_cb(self.scenario_service.scenario_actif.date_in, cb.id, date_solde_comptes).solde)}", cb.id)
+                    self.quel_compte_box.addItem(f"{cb.type} | {banque.nom} | {euro(self.cb_service.solde_from_cb(scenario.date_in, cb.id, date_solde_comptes).solde)}", cb.id)
                 self.quel_compte_box.setDisabled(False)
         else:
             self.quel_compte_box.setDisabled(True)
     
     def enregistrer_clicked(self):
         type = self.type_box.currentText().strip()
-        if type == "Immobilier":
+        if type == investType.IMMO:
             self.enregistrer_immo()
-        elif type == "Stock":
+        elif type == investType.STOCK:
             self.enregistrer_stock()
         else:
             self.page_msg.setText("Veuillez selectionner un type d'investissement avant de submit.")
@@ -281,7 +285,7 @@ class NouveauProjetPage(QWidget):
             data = {}
             
             data["ID USER"] = self.session.current_user.id
-            data["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+            data["ID SCENARIO"] = self.scenario_service.scenario_actif_id
             data["ID COMPTE"] = quel_compte_id
             data["TITRE"] = titre
             data["PRIX ACHAT"] = prix
@@ -289,10 +293,17 @@ class NouveauProjetPage(QWidget):
             data["VALORISATION (%/AN)"] = valorisation_pct/100
             data["ETAT"] = "à conclure"
             data["DIVIDENDES (%)"] = dividendes_pct
-            
-            investissement = self.invest_service.update_stock(None, data)
-            
-            self.navigator.go_to(Page.INVESTISSEMENT_HUB)
+            try:
+                investissement = self.invest_service.save_invest(investType.STOCK, None, data)
+                self.navigator.go_to(Page.INVESTISSEMENT_HUB)
+            except SoldeInsuffisantError as e:
+                self.page_msg.setText(f"Solde insuffisant : {e.solde}€ disponible, {e.montant_demande}€ requis")
+            except ScenarioNotFoundError as e:
+                self.page_msg.setText("Scénario introuvable — veuillez réessayer.")
+            except NegativeAmountError as e:
+                self.page_msg.setText(str(e))
+            except QuantFolioError as e:
+                self.page_msg.setText("Une erreur est survenue lors de l'enregistrement.")
     
     def enregistrer_immo(self):
         
@@ -307,6 +318,15 @@ class NouveauProjetPage(QWidget):
         surface = None if not(self.surface_input.text().strip()) else float(self.surface_input.text().strip())
         type = None if not(self.type_bien_input.currentText().strip()) else self.type_bien_input.currentText().strip()
 
+        print(prix is None,
+             comptant is None,
+             month is None,
+             year is None,
+             valorisation_pct is None,
+             titre is None,
+             surface is None,
+             type is None,
+             ville is None)
         if (prix is None
             or comptant is None
             or month is None
@@ -321,7 +341,7 @@ class NouveauProjetPage(QWidget):
             data = {}
             
             data["ID USER"] = self.session.current_user.id
-            data["ID SCENARIO"] = self.scenario_service.scenario_actif.id
+            data["ID SCENARIO"] = self.scenario_service.scenario_actif_id
             data["ID COMPTE"] = quel_compte_id
             data["TITRE"] = titre
             data["COMPTANT (%)"] = comptant/prix 
@@ -333,9 +353,17 @@ class NouveauProjetPage(QWidget):
             data["TYPE"] = type
             data["SURFACE"] = surface
             
-            investissement = self.invest_service.update_immo(None, data)
-            
-            self.navigator.go_to(Page.INVESTISSEMENT_HUB)
+            try:
+                investissement = self.invest_service.save_invest(investType.IMMO,None, data)
+                self.navigator.go_to(Page.INVESTISSEMENT_HUB)
+            except SoldeInsuffisantError as e:
+                self.page_msg.setText(f"Solde insuffisant : {e.solde}€ disponible, {e.montant_demande}€ requis")
+            except ScenarioNotFoundError as e:
+                self.page_msg.setText("Scénario introuvable — veuillez réessayer.")
+            except NegativeAmountError as e:
+                self.page_msg.setText(str(e))
+            except QuantFolioError as e:
+                self.page_msg.setText("Une erreur est survenue lors de l'enregistrement.")
             
     def validator_comptant(self):
         prix_input = self.prix_achat_input
@@ -346,26 +374,32 @@ class NouveauProjetPage(QWidget):
             print(f"VLDTR Projet Immo Comptant {prix}")
 
     def load(self):
-        self.immo_wgt.hide()
-        self.stock_wgt.hide()
-        self.common_wgt.show()
-        
-        self.quel_compte_box.clear()
-        self.quel_compte_box.addItem("")
-        cbs = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif.id)
-        scenario_date_in = self.scenario_service.scenario_actif.date_in
-        for cb in cbs:
-            banque = self.banque_service.get_banque_by_id(cb.id_banque)
-            self.quel_compte_box.addItem(f"{cb.type} | {banque.id} | {euro(self.cb_service.solde_from_cb(scenario_date_in, cb.id, scenario_date_in).solde)}", cb.id)
-        
-        self.titre_projet.clear()
-        self.prix_achat_input.setText("")
-        self.month_achat_input.setText("")
-        self.year_achat_input.setText("")    
-        self.valorisation_pct_input.setText("")    
-        self.comptant_input.setText("")
-        self.surface_input.clear()
-        self.ville_input.clear()
-        self.type_bien_input.setCurrentIndex(0)
-        
-        self.page_msg.setText("")
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            self.type_box.setCurrentIndex(0)
+            self.immo_wgt.hide()
+            self.stock_wgt.hide()
+            self.common_wgt.show()
+            
+            self.quel_compte_box.clear()
+            self.quel_compte_box.addItem("")
+            cbs = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif_id)
+            scenario_date_in = scenario.date_in
+            for cb in cbs:
+                banque = self.banque_service.get_banque_by_id(cb.id_banque)
+                self.quel_compte_box.addItem(f"{cb.type} | {banque.id} | {euro(self.cb_service.solde_from_cb(scenario_date_in, cb.id, scenario_date_in).solde)}", cb.id)
+            
+            self.titre_projet.clear()
+            self.prix_achat_input.setText("")
+            self.month_achat_input.setText("")
+            self.year_achat_input.setText("")    
+            self.valorisation_pct_input.setText("")    
+            self.comptant_input.setText("")
+            self.surface_input.clear()
+            self.ville_input.clear()
+            self.type_bien_input.setCurrentIndex(0)
+            
+            self.page_msg.setText("")
+        else: 
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.NOUVEAU_PROJET)

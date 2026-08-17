@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain import StockOption
+from domain.entities import StockOption
 
 
 
@@ -20,7 +20,7 @@ class StockOptionsRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID STOCKOPTION", "ID USER", "VALEUR (€)", "DATE CREATION", "DATE FIN", "AUGMENTATION (€/AN)"
+                    "ID STOCKOPTION", "ID DIVIDENDES",  "ID USER", "ID COMPTE", "ID ACHAT", "ID VENTE", "PRIX ACHAT", "DIVIDENDES (%)", "TITRE", "VALORISATION (%/AN)", "DATE ACHAT", "DATE VENTE", "ETAT"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)
@@ -110,10 +110,13 @@ class StockOptionsRepository:
         if "ID STOCKOPTION" not in stockoption or stockoption["ID STOCKOPTION"] is None:
             next_ID = int(df["ID STOCKOPTION"].max()) + 1 if (len(df) and df["ID STOCKOPTION"].notna().any()) else 1
             stockoption["ID STOCKOPTION"] = next_ID
+            
+        new_id = stockoption["ID STOCKOPTION"]
         stockoption = pd.DataFrame([stockoption])
         df = pd.concat([df, stockoption], ignore_index=True)
         self._save_df(df)
-        return self._rows_to_stockoption(stockoption)[0]
+        saved_row = df[df["ID STOCKOPTION"] == new_id ]
+        return self._rows_to_stockoption(saved_row)[0]
 
     def update(self, stockoption_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()

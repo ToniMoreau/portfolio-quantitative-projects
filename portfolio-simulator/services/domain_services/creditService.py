@@ -1,45 +1,87 @@
-from repositories import CreditcRepository, RecetteRepository, DepenseRepository
-from domain import Crédit
+from repositories import CreditRepository
+from domain.entities import Crédit
+from domain.errors import (
+    CreditNotFoundError,
+    IntegrityError,
+    MissingColumnError,
+    BusinessRuleError,
+)
 from numpy import log
-
+from .depenseService import DepenseService
+from .recetteService import RecetteService
 from datetime import date
 from utils.date import *
+
 class CreditService:
-    def __init__(self, credit_repo: CreditcRepository, recette_repo : RecetteRepository, depense_repo :DepenseRepository ):
-        self.credit_repo = credit_repo
-        self.recette_repo = recette_repo
-        self.depense_repo = depense_repo
-        self.credit_actif = None
+    def __init__(self, credit_repo: CreditRepository, recette_service : RecetteService, depense_service :DepenseService ):
+        self.credit_repo = credit_repo        
+        self.depense_service = depense_service
+        self.recette_service = recette_service
+        self.credit_actif_id = None
     
     def update_credit(self, credit_id, data):
-        credit = self.credit_repo.get_by_ID(credit_id)
-        if credit is None:
-            credit = self.credit_repo.create(data)
-        else: self.credit_repo.update(credit.id, data)
-        
-        fresh_credit = self.credit_repo.get_by_ID(credit.id)
+        try:
+            credit = self.credit_repo.get_by_ID(credit_id)
+            if credit is None:
+                credit = self.credit_repo.create(data)
+            else:
+                self.credit_repo.update(credit.id, data)
+            fresh_credit = self.credit_repo.get_by_ID(credit.id)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Credit") from e
+
         if fresh_credit is None:
-            raise ValueError("Metier introuvable après update")
+            raise IntegrityError("Credit introuvable après update")
         return fresh_credit
     
-    def set_credit_actif(self, new_actif : Crédit | None = None):
-        self.credit_actif = new_actif
-    def get_by_(self, dict_bys):
-        return self.credit_repo.get_by_(dict_bys)
+    def set_credit_actif(self, new_actif_id : int | None = None):
+        self.credit_actif_id = new_actif_id
+
+    def get_by_criterias(self, dict_bys):
+        try:
+            return self.credit_repo.get_by_(dict_bys)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Credit") from e
     
     def get_all_credit_from_user(self, user_id) -> list[Crédit]:
-        liste = self.credit_repo.get_by_userID(user_id)
+        try:
+            liste = self.credit_repo.get_by_userID(user_id)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Credit") from e
+
         if liste is None:
             return []
         return liste
     
     def get_credit_by_id(self, credit_id):
-        return self.credit_repo.get_by_ID(credit_id)
-    def delete_credit(self, credit : Crédit):
-        self.credit_repo.delete(credit.id)
+        try:
+            return self.credit_repo.get_by_ID(credit_id)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Credit") from e
+
+    def delete_credit(self, credit_id):
+        credit = self.credit_repo.get_by_ID(credit_id)
+        if credit is None:
+            raise CreditNotFoundError(credit_id)
+        try:
+            depenses_liees = self.depense_service.get_by_criterias({"ID SOURCE": credit_id}) or []
+            recettes_liees = self.recette_service.get_by_criterias({"ID SOURCE": credit_id}) or []
+
+            for depense in depenses_liees:
+                self.depense_service.delete_depense(depense.id)
+            for recette in recettes_liees:
+                self.recette_service.delete_recette(recette.id)
+
+            self.credit_repo.delete(credit.id)
+
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Credit") from e    
     
     def get_all_credits_from_scenario(self, scenario_id):
-        credits = self.credit_repo.get_by_({"ID SCENARIO": scenario_id})
+        try:
+            credits = self.credit_repo.get_by_({"ID SCENARIO": scenario_id})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Credit") from e
         return credits
     
     def montant_total_credits_from_scenario(self, scenario_id):
@@ -49,24 +91,30 @@ class CreditService:
             somme += credit.montant
         return somme
     
-    def capacite_emprunt(self, id_scenario, date_credit : date):
+    def capacite_emprunt(self, id_scenario, date_credit: date, excluded_ids: set = None):
+        excluded_ids = excluded_ids or set()
         # revenus (salaires, locatifs *70%)
         #crédits en cours
         #35% d'endettement
         ENDETTEMENT_TAUX = 0.35
         
-        revenu_mensuels = self.recette_repo.get_by_({"ID SCENARIO" : id_scenario, "NATURE" : "Revenus", "FREQUENCE" : "Mensuel"})
-        print(revenu_mensuels)
-        revenus_locatifs = self.recette_repo.get_by_({"ID SCENARIO" : id_scenario, "NATURE" : "Revenus locatifs", "FREQUENCE" : "Mensuel"}) or [] 
-        salaires = self.recette_repo.get_by_({"ID SCENARIO" : id_scenario, "NATURE" : "Salaires", "FREQUENCE" : "Mensuel"}) or []
+        try:
+            revenu_mensuels = self.recette_service.get_by_criterias({"ID SCENARIO": id_scenario, "NATURE": "Revenus", "FREQUENCE": "Mensuel"}) or []
+            revenus_locatifs = self.recette_service.get_by_criterias({"ID SCENARIO": id_scenario, "NATURE": "Locataires", "FREQUENCE": "Mensuel"}) or []
+            salaires = self.recette_service.get_by_criterias({"ID SCENARIO": id_scenario, "NATURE": "Salaires", "FREQUENCE": "Mensuel"}) or []
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette/") from e
         
         revenus_admissibles = []
         revenus_admissibles.extend(revenus_locatifs)
         revenus_admissibles.extend(revenu_mensuels)
         revenus_admissibles.extend(salaires)
+
+        revenus_admissibles = [r for r in revenus_admissibles
+                            if r.id not in excluded_ids and r.id_source not in excluded_ids]
         
         date_out = date_credit.month + date_credit.year * 12
-        date_in = date_out-5
+        date_in = date_out - 5
         
         capa_emprunt = 0
         for recette in revenus_admissibles:
@@ -82,30 +130,36 @@ class CreditService:
                     capa_emprunt += recette.montant * coef
                 date -= 1
 
-        capa_emprunt*=ENDETTEMENT_TAUX
+        capa_emprunt *= ENDETTEMENT_TAUX
         
-        credits = self.get_all_credits_from_scenario(id_scenario) or []
-        print("credits : ", credits)
+        credits = self.depense_service.get_by_criterias({"ID SCENARIO": id_scenario, "NATURE": "Crédit", "FREQUENCE": "Mensuel"}) or []
+        loyers = self.depense_service.get_by_criterias({"ID SCENARIO": id_scenario, "NATURE": "Loyers", "FREQUENCE": "Mensuel"}) or []
         
-        for credit in credits:
-            credit_out = credit.fin.month + credit.fin.year * 12 
-            credit_in = credit.debut.month + credit.debut.year * 12
-            print("in : ", credit_in)
-            print("out : ", credit_out)
+        depenses_admissibles = []
+        depenses_admissibles.extend(credits)
+        depenses_admissibles.extend(loyers)
+
+        depenses_admissibles = [d for d in depenses_admissibles
+                                if d.id_source not in excluded_ids and d.id not in excluded_ids]
+
+        for depense in depenses_admissibles:
+            depense_out = depense.date_out.month + depense.date_out.year * 12 
+            depense_in = depense.date_in.month + depense.date_in.year * 12
             
             date = date_out
             while date >= date_in:
-                if credit_in <= date <= credit_out:   
-                    print("yes credit in")
-                    capa_emprunt -= credit.mensualite_constante
-                date-=1
-        capa_emprunt /= (date_out - date_in +1)
+                if depense_in <= date <= depense_out:   
+                    capa_emprunt -= depense.montant
+                date -= 1
+        capa_emprunt /= (date_out - date_in + 1)
         
         return max(0, capa_emprunt)
     
-
     def tableau_amortissement(self, id_credit):
         credit = self.get_credit_by_id(id_credit)
+        if credit is None:
+            raise CreditNotFoundError(id_credit)
+
         amortissement = {"ANNEE" : [], 
                     "A REMBOURSER (€)" : [], 
                     "TAUX INTERET (PCT)" : [], 
@@ -187,7 +241,7 @@ class CreditService:
         taux_mensuel = taux_mensuel_pct/100
         
         if taux_annuel_pct == 0:
-            empruntable == mensualite * duree_mois
+            empruntable = mensualite * duree_mois
         else:
             empruntable = mensualite * (1 - (1+taux_mensuel)**(-duree_mois))/(taux_mensuel * (1+taux_mensuel)**duree_differe_mois)
         return empruntable
@@ -205,11 +259,8 @@ class CreditService:
         if taux_mensuel == 0:
             return montant / mensu  
         if mensu <= montant * taux_mensuel:
-            raise ValueError("Mensualité trop faible pour couvrir les intérêts")        
+            raise BusinessRuleError("Mensualité trop faible pour couvrir les intérêts")        
         a_amortir = montant *(1+taux_mensuel)**duree_differe_mois
         
         duree_mois = - (log(1 - (a_amortir * taux_mensuel)/mensu)/log(1+taux_mensuel))
         return duree_mois
-        
-        
-            

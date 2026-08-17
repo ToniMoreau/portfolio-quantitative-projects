@@ -8,12 +8,12 @@
 portfolio-simulator/
 ├── data/                          # Excel-based data store (one file per user profile)
 ├── docs/                          # Project documentation
-├── domain/                        # Core domain entities
-├── repositories/                  # Data access layer (Excel ↔ domain objects)
+├── domain.entities/                        # Core domain.entities entities
+├── repositories/                  # Data access layer (Excel ↔ domain.entities objects)
 ├── services/
-│   └── domain_services/           # Business logic layer
+│   └── domain.entities_services/           # Business logic layer
 ├── ui/                            # PySide6 interface
-│   ├── sous_pages/                # All application pages, organized by domain
+│   ├── sous_pages/                # All application pages, organized by domain.entities
 │   │   ├── Auth/                  # Authentication pages
 │   │   ├── banque/                # Standalone bank pages
 │   │   └── Profil/                # Main profile section (post-login)
@@ -36,11 +36,11 @@ portfolio-simulator/
 
 ---
 
-## Domain Model
+## domain.entities Model
 
-The domain layer defines the core business entities of QuantFolio. Each entity maps to a dedicated sheet in the Excel data store.
+The domain.entities layer defines the core business entities of QuantFolio. Each entity maps to a dedicated sheet in the Excel data store.
 
-> ⚠️ *Note: not all domain classes are actively used in the current version. This section reflects the full intended model.*
+> ⚠️ *Note: not all domain.entities classes are actively used in the current version. This section reflects the full intended model.*
 
 | File | Entity | Description |
 |---|---|---|

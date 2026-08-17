@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import ClassVar
 from datetime import date
 from utils.date import *
-
+from domain.enums import DependentType
 # dans une banque il y a des profils bancaire, dans un profil bancaire il y a des crédits et des comptes, dans les comptes il y a des comptes bancaires
 
 @dataclass
@@ -31,7 +31,7 @@ class CompteBancaire:
     id: int
     type : str 
     id_banque: int | None
-
+    id_scenario : int | None
     id_utilisateur: int | None = None
     solde_initial: float = 0.
     taux_annuel : float | None = None
@@ -70,9 +70,7 @@ class Crédit:
     id_banque: int
     id_utilisateur : int
     id_compte : int
-    id_depense : int | None= None
-    id_recette : int | None =  None
-    id_invest : int | None= None
+    id_source : int | None= None
     debut : date = None
     fin : date = None
     montant : float = 0
@@ -84,7 +82,7 @@ class Crédit:
 
 
     def __str__(self):
-        return f"Crédit d'un montant de {self.montant} €, échéance de {self.mensualite_constante} €. Remboursement pendant {self.durée_crédit_année} mois"
+        return f"Crédit d'un montant de {self.montant} €, échéance de {self.mensualite_constante} €. Remboursement pendant {self.durée_crédit_mois} mois"
 
     def credit_restant_from_date(self, date : date):
         total_remboursement = self.mensualite_constante * self.durée_crédit_mois
@@ -105,3 +103,6 @@ class Crédit:
         print(self.mensualite_constante)
         print(self.mensualite_constante*(1-(1+monthly_inflation)**(-self.durée_crédit_mois))/monthly_inflation)
         return self.mensualite_constante*(1-(1+monthly_inflation)**(-self.durée_crédit_mois))/monthly_inflation
+    
+    def get_dependent_type(self):
+        return DependentType.CREDIT

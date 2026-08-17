@@ -1,5 +1,10 @@
 from repositories import RecetteRepository
-from domain import Recette
+from domain.entities import Recette
+from domain.errors import (
+    RecetteNotFoundError,
+    IntegrityError,
+    MissingColumnError,
+)
 from datetime import date
 
 class RecetteService:
@@ -8,34 +13,58 @@ class RecetteService:
         self.natures_customs = ["","Revenus Divers", "Autres", "Dons/Cadeaux"]
 
     def update_recette(self, recette_id, data, is_transaction : bool | None = None):
-        recette = self.recette_repo.get_by_ID(recette_id)
-        if recette is None:
-            recette = self.recette_repo.create(data, is_transaction)
-        else : self.recette_repo.update(recette.id, data)
-        
-        fresh_recette = self.recette_repo.get_by_ID(recette.id)
+        try:
+            recette = self.recette_repo.get_by_ID(recette_id)
+            if recette is None:
+                recette = self.recette_repo.create(data, is_transaction)
+            else:
+                self.recette_repo.update(recette.id, data)
+            fresh_recette = self.recette_repo.get_by_ID(recette.id)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
+
         if fresh_recette is None:
-            raise ValueError("Metier introuvable après update")
+            raise IntegrityError("Recette introuvable après update")
         return fresh_recette
     
-    def get_by_(self, dict_bys):
-        return self.recette_repo.get_by_(dict_bys)
+    def get_by_criterias(self, dict_bys):
+        try:
+            return self.recette_repo.get_by_(dict_bys)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
+
     def get_by_transaction(self, transaction_id):
-        recette = self.recette_repo.get_by_({"ID TRANSACTION": transaction_id})
+        try:
+            recette = self.recette_repo.get_by_({"ID TRANSACTION": transaction_id})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
+
         if recette is not None:
             return recette[0]
         return None
     
     def get_recette_by_id(self, recette_id):
-        return self.recette_repo.get_by_ID(recette_id)
+        try:
+            return self.recette_repo.get_by_ID(recette_id)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
 
 
-    def delete_recette(self, recette : Recette):
-        if recette is not None:
+    def delete_recette(self, recette_id):
+        recette = self.recette_repo.get_by_ID(recette_id)
+        if recette is None:
+            raise RecetteNotFoundError(recette_id)
+        try:
             self.recette_repo.delete(recette.id)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
         
     def all_userrecette_from_scenario(self, scenario_id) -> list[Recette]:
-        recettes = self.recette_repo.get_by_({"ID SCENARIO": scenario_id})
+        try:
+            recettes = self.recette_repo.get_by_({"ID SCENARIO": scenario_id})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
+
         if recettes is None:
             return []
         return recettes
@@ -53,7 +82,11 @@ class RecetteService:
 
         recettes_totales = []
         for cb_id in cbs_id:
-            recettes = self.recette_repo.get_by_({"ID COMPTE": cb_id})
+            try:
+                recettes = self.recette_repo.get_by_({"ID COMPTE": cb_id})
+            except KeyError as e:
+                raise MissingColumnError(str(e), feuille="Recette") from e
+
             if not(recettes):
                 pass
             elif date_valide is None:
@@ -89,10 +122,16 @@ class RecetteService:
         return montant
                     
     def get_locataires_from_scenario(self, scenario_id : int):
-        return self.recette_repo.get_by_({"NATURE": "Locataires", "ID SCENARIO":scenario_id})
+        try:
+            return self.recette_repo.get_by_({"NATURE": "Locataires", "ID SCENARIO":scenario_id})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
     
     def get_locataires_from_immo(self, id_immo : int):
-        return self.recette_repo.get_by_({"NATURE" : "Locataires", "ID INVEST" : id_immo})
+        try:
+            return self.recette_repo.get_by_({"NATURE" : "Locataires", "ID SOURCE" : id_immo})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
     
     def get_locataire_from_date(self, id_immo : int, date : date):
         locataires = []
@@ -118,20 +157,27 @@ class RecetteService:
         
         for locataire in demenagent_apres_vente:
             if locataire.id in {l.id for l in emmenagent_apres_vente}:                
-                self.delete_recette(locataire)
+                self.delete_recette(locataire.id)
             else:
                 self.update_recette(locataire.id, {"DATE OUT" : date_vente})
     
     def get_moved_out_after_date(self, immo_id : int, date_seuil : date) -> list[Recette]:
-        locataires =  self.recette_repo.get_by_({"NATURE" : "Locataires", "ID INVEST" : immo_id})
+        try:
+            locataires = self.recette_repo.get_by_({"NATURE" : "Locataires", "ID SOURCE" : immo_id})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
         
         result = []
         for locataire in locataires:
             if locataire.date_out >= date_seuil:
                 result.append(locataire)
         return result
+
     def get_moved_in_after_date(self, immo_id : int, date_seuil  :date) -> list[Recette]:
-        locataires =  self.recette_repo.get_by_({"NATURE" : "Locataires", "ID INVEST" : immo_id})
+        try:
+            locataires = self.recette_repo.get_by_({"NATURE" : "Locataires", "ID SOURCE" : immo_id})
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="Recette") from e
         
         result = []
         for locataire in locataires:

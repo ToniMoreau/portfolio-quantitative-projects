@@ -66,7 +66,7 @@ class BanquePage(QWidget):
         self.load_index(1)
         
     def supprimer_clicked(self):
-        self.banque_service.delete_banque(self.banque_service.banque_active)
+        self.banque_service.delete_banque(self.banque_service.banque_active.id)
         self.load()
         
     def load(self):        
@@ -79,6 +79,7 @@ class BanquePage(QWidget):
             self.banque_table.addItem(banqueItem)
         self.btn_supprimer.hide()
         self.btn_modifier.hide()
+        
     def load_index(self, index):
         self.stack.setCurrentIndex(index)
         

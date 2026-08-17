@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain import Scenario
+from domain.entities import Scenario
 import datetime
 
 class ScenarioRepository:
@@ -19,7 +19,7 @@ class ScenarioRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID SCENARIO", "ID USER", "INTITULE", "DATE IN"
+                    "ID SCENARIO", "ID USER", "INTITULE", "DATE IN", "DATE LIMITE"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)
@@ -90,11 +90,14 @@ class ScenarioRepository:
         if "ID SCENARIO" not in scenario or scenario["ID SCENARIO"] is None:
             next_ID = int(df["ID SCENARIO"].max()) + 1 if (len(df) and df["ID SCENARIO"].notna().any()) else 1
             scenario["ID SCENARIO"] = next_ID
+            
+        new_id = scenario["ID SCENARIO"]
         scenario = pd.DataFrame([scenario])
         df = pd.concat([df, scenario ], ignore_index=True)
         self._save_df(df)
         
-        return self._rows_to_scenario(scenario)[0]
+        saved_row = df[df["ID SCENARIO"] == new_id]
+        return self._rows_to_scenario(saved_row)[0]
 
     def update(self, scenario_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()

@@ -197,7 +197,7 @@ class NoCreditPage(QWidget):
             and self.test_limite_mensu_input(self.mensualite_input.text().strip())
             and self.test_limite_duree_input(self.duree_credit_input.text().strip())
         )
-        ok = ok or (self.credit_service.credit_actif is not None)
+        ok = ok or (self.credit_service.credit_actif_id is not None)
 
         self.enregistrer_btn.setEnabled(ok) 
 
@@ -364,9 +364,10 @@ class NoCreditPage(QWidget):
             self.mensualite_wgt.hide()    
 
     def update_capa_emprunt(self):
+        
         try:
             date_credit = date(int(self.debut_year_input.text().strip()), int(self.debut_date_lbl.text().strip()), 1)
-            self.capa_mensu = self.credit_service.capacite_emprunt(self.scenario_service.scenario_actif.id, date_credit)
+            self.capa_mensu = self.credit_service.capacite_emprunt(self.scenario_service.scenario_actif_id, date_credit)
             
             self.capacite_emprunt.setText(f"Capacité maximum d'emprunt : {euro(self.capa_mensu)}")
             
@@ -383,7 +384,7 @@ class NoCreditPage(QWidget):
     def update_choix(self, index):
         banque_name = self.banque_choix.currentText().strip()
         banque = self.banque_service.get_banque_by_name(banque_name)
-        filtre = {"ID USER" : self.session.current_user.id, "ID SCENARIO" : self.scenario_service.scenario_actif.id, "ID BANQUE" : banque.id}
+        filtre = {"ID USER" : self.session.current_user.id, "ID SCENARIO" : self.scenario_service.scenario_actif_id, "ID BANQUE" : banque.id}
         comptes = self.cb_service.all_userCB_from_(filtre)
         self.compte_bancaire_choix.clear()
         self.compte_bancaire_choix.addItem("")
@@ -409,7 +410,8 @@ class NoCreditPage(QWidget):
             self.info_widget.show()
             
     def enregistrer_clicked(self):
-            credit = self.credit_service.credit_actif
+            credit = self.credit_service.get_credit_by_id(self.credit_service.credit_actif_id)
+            
             invest_id = self.invest_service.invest_actif_id
             invest = self.invest_service.get_by_id(invest_id)
             
@@ -468,8 +470,8 @@ class NoCreditPage(QWidget):
 
                 data["ID COMPTE"] = data_depense["ID COMPTE"] = data_recette["ID COMPTE"] = compte_choix
                 data["ID USER"] = data_depense["ID USER"] = data_recette["ID USER"]= self.session.current_user.id
-                data["ID SCENARIO"] =data_depense["ID SCENARIO"] =data_recette["ID SCENARIO"]=  self.scenario_service.scenario_actif.id
-                data["ID INVEST"] = invest_id
+                data["ID SCENARIO"] =data_depense["ID SCENARIO"] =data_recette["ID SCENARIO"]=  self.scenario_service.scenario_actif_id
+                data["ID SOURCE"] =  invest.id
                 
                 data["MENSUALITE (€)"] = data_depense["MONTANT"]=mensu            
                 data["DATE OUT"] = data_depense["DATE OUT"] = date_out
@@ -488,48 +490,51 @@ class NoCreditPage(QWidget):
                 data_depense["FREQUENCE"] = "Mensuel"
                 data_recette["FREQUENCE"]= "Ponctuel"
                 
+                credit = self.credit_service.update_credit(id ,data)
+                data_depense["ID SOURCE"] = data_recette["ID SOURCE"] = credit.id
+                
                 depense_credit = self.depense_service.update_depense(id_depense, data_depense)
                 recette_credit = self.recette_service.update_recette(id_recette, data_recette)
-                
-                data["ID RECETTE"] = recette_credit.id
-                data["ID DEPENSE"] = depense_credit.id
-                
-                credit = self.credit_service.update_credit(id ,data)
+                                
                 invest = self.invest_service.update_investissement(invest_id, {"ID CREDIT" : credit.id, "ETAT" : "à conclure"})
                 
                 self.navigator.go_to(Page.CREDITS)
                
     def load(self):
-        self.scenario_label.setText(f'Scénario : {self.scenario_service.scenario_actif.intitule}')
-        invest = self.invest_service.get_by_id(self.invest_service.invest_actif_id)
-        
-        date_credit = date(invest.date_in.year, invest.date_in.month, invest.date_in.day)
-        self.capa_mensu = self.credit_service.capacite_emprunt(self.scenario_service.scenario_actif.id, date_credit)
-        
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:    
+            self.scenario_label.setText(f'Scénario : {scenario.intitule}')
+            invest = self.invest_service.get_by_id(self.invest_service.invest_actif_id)
             
-        self.banque_choix.clear()
-        self.banque_choix.addItem("")
-        for banque in self.banque_service.get_all_banques():
-            self.banque_choix.addItem(banque.nom, banque.id)
-
-        self.compte_bancaire_choix.clear()
-        
-        self.type_list.setCurrentIndex(0)
-        
-        self.montant_input.setText(str(euro(invest.prix_achat*(1-invest.comptant_pct))))
-        
-        date_str = f"{0 if date_credit.month < 10 else""}{date_credit.month}/{date_credit.year}"
-        self.debut_date_lbl.setText(date_str)
-        
-        self.mensualite_input.setText("")
-        self.duree_credit_input.setText("")
-        self.duree_differee_input.setText("")
-        self.taux_interet_pct_input.setText("")
-        self.capabilité_emprunt(self.taux_interet_pct_input)
-        
-        self.mensualite_wgt.hide()
-        self.montant_widget.hide()
-        self.duree_credit_wgt.hide()
-        self.reload_btn.hide()
+            date_credit = date(invest.date_in.year, invest.date_in.month, invest.date_in.day)
+            self.capa_mensu = self.credit_service.capacite_emprunt(self.scenario_service.scenario_actif_id, date_credit)
+            
                 
-        
+            self.banque_choix.clear()
+            self.banque_choix.addItem("")
+            for banque in self.banque_service.get_all_banques():
+                self.banque_choix.addItem(banque.nom, banque.id)
+
+            self.compte_bancaire_choix.clear()
+            
+            self.type_list.setCurrentIndex(0)
+            
+            self.montant_input.setText(str(euro(invest.prix_achat*(1-invest.comptant_pct))))
+            
+            date_str = f"{0 if date_credit.month < 10 else""}{date_credit.month}/{date_credit.year}"
+            self.debut_date_lbl.setText(date_str)
+            
+            self.mensualite_input.setText("")
+            self.duree_credit_input.setText("")
+            self.duree_differee_input.setText("")
+            self.taux_interet_pct_input.setText("")
+            self.capabilité_emprunt(self.taux_interet_pct_input)
+            
+            self.mensualite_wgt.hide()
+            self.montant_widget.hide()
+            self.duree_credit_wgt.hide()
+            self.reload_btn.hide()
+                    
+        else:
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.NO_CREDIT)

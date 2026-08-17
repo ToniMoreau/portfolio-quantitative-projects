@@ -3,25 +3,38 @@
 Inflation system : par item, global
 Gestion de la "date du jour", comment procéder ? utilse pour present value, inflation, etc...
 
-beaucoup de page n'ont pas ou sont mal muni d'un "modifié"
 
 soon : 
-- gerer les "+d'infos"
-- gerer les value error en UI (ui plutot que raise Error)
-- transformer tous les ...actifs des services en actifs_id
-- analyse des rente immobilieres
-- implémentation rigoureuse des impositions de chaque nature (+frais diverses avocat, notaire...)
-- logement vacancy en fonction du prix du loyer
-- meilleure gestion des blocages de fenetres en mode sans scenario
+- mécanisme de copie de scénario
+PB dependantes SUPPRIME PAS LES CHILDREN
+- mecanisme d'ajout de scenario defaillant (devrait sortir de l'onglet add, et update le combobox scenario)
+- Le dur des suppressions dependantes est codé, reste plus qu'a implémenter dans l'UI
+- popup deletion pour P.A.S set entity sous form de frise chrono des events a supprimer
+- capa mensuelle devrait prendre en compte les endettement present aussi pas que passé
+- PRIORITE : Visualisation onglet a absolument implémenter, dernière étape avant l'analyse quantitative des actifs
 - dividendes frequence to be upgraded (various one, in combo boxes)
-- gérer l'impossibilité d'investissement boursier si pas les fonds
-- gérer comptant insuffisant pour achat bien / stocks
-
+- regler le pb des virgules pas bien lu dans les input
+- 🕐🔴analyse des rente immobilieres
+- 🕐🔴implémentation rigoureuse des impositions de chaque nature (+frais diverses avocat, notaire...)
+- 🕐🔴logement vacancy en fonction du prix du loyer
+- 🕐🔴 gerer les "+d'infos"
+- 🕐 (gerer les value error en UI (ui plutot que raise Error))
 
 fait :
+- ✅ transformer tous les ...actifs des services en actifs_id
 - ✅ corréler vente bien avec raccourcissement locations date
 - ✅ trier tous les services inutiles dans les pages
 - ✅ invest immo, rajouter les attributs de plaisance dans la creation d'un nouvel invest
 - ✅ stock option investissement 
 - ✅ gestion des locataires dans les biens immobiliers
 - ✅ la frequence des depenses/recette est qu'indicative, mais pas prise en compte dans les equations actuellement
+- ✅ gérer comptant insuffisant pour achat bien / stocks
+- ✅ bien remettre les colonnes names dans les repos
+- ✅ blocage fenetre : quasi fini, juste le refesh quand on enleve scenario 
+- ✅ vérifier les revenus prix en compte pour le calcul de l'endettement crédit (rente immo, salaires)
+- ✅ gérer les "modifier" pour chaque page qui en a besoin
+- ✅ "modifier credit" btn n'est peut etre plus adequat ? 
+- ✅ dividendes affichés dans nouvel immo 
+- ✅ assurer que les transaction sont supprimés/traités via transactionService et pas depense/recetteservice (obsolete)
+- ✅ id sourcing remplace id invest/autres
+- ✅ supprimer un crédit devrait supp tous les achats et tous les crédits dependants de celui ci

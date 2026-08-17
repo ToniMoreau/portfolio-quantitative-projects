@@ -1,27 +1,41 @@
 from repositories import Repositories
+from domain.errors import (
+    InvalidCredentialsError,
+    EntiteDejaExistanteError,
+    MissingColumnError,
+)
 
 class AuthService:
     def __init__(self, repos : Repositories):
         self.repos = repos
         
     def login(self, username, password):
-        user = self.repos.user_repo.get_by_username(username)                
-        if not user:
-            raise ValueError("Utilisateur inexistant")
-        if user.password != password:
-            raise ValueError("Mot de passe incorrect")
+        try:
+            user = self.repos.user_repo.get_by_username(username)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="User") from e
+
+        if not user or user.password != password:
+            raise InvalidCredentialsError()
         return user
     
     def register(self, username, password):
-        
-        if self.repos.user_repo.get_by_username(username):
-            raise ValueError("Utilisateur déjà existant")
+        try:
+            existing = self.repos.user_repo.get_by_username(username)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="User") from e
+
+        if existing:
+            raise EntiteDejaExistanteError("Utilisateur", username)
         
         user = {
             "username" : username, 
             "password" : password, 
         }
         
-        user = self.repos.user_repo.create(user)
+        try:
+            user = self.repos.user_repo.create(user)
+        except KeyError as e:
+            raise MissingColumnError(str(e), feuille="User") from e
         
         return user

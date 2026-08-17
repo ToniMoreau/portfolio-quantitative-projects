@@ -6,9 +6,18 @@ from PySide6.QtCore import QObject, Signal
 
 class NavigatorService(QObject):
     navigation_requested = Signal(object, object)  # (page_key, context)
-
+    holding = None
     def go_to(self, page_key: str, context=None):
         self.navigation_requested.emit(page_key, context)
+        
+    def hold_page(self, page):
+        self.holding = page
+        
+    def reload(self):
+        print("holdin",self.holding)
+        self.go_to(self.holding)
+        
+    
 
 class Page(Enum):
     # ─────────────────────────────────────────────
@@ -19,6 +28,8 @@ class Page(Enum):
     PROFIL = "profil"
     AUTH = "auth"
     BANQUE_STANDALONE = "banque_standalone"   # the admin-only sous_pages/banque one
+    
+    NO_SCENARIO = "no_scenario" #blocker when no scenario selected
 
     # ─────────────────────────────────────────────
     # Ground 1 — owned by ProfilPage (all functional pages)

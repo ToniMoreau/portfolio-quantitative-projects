@@ -89,8 +89,8 @@ class ComptesBancairesPage(QWidget):
         
     def supprimer_clicked(self):
         cb_id = self.liste_comptes.currentItem().data(1)
-        credit = self.credit_service.get_by_({"ID COMPTE" : cb_id})
-        metier = self.metier_service.get_by_({"ID COMPTE" : cb_id})
+        credit = self.credit_service.get_by_criterias({"ID COMPTE" : cb_id})
+        metier = self.metier_service.get_by_criterias({"ID COMPTE" : cb_id})
         if credit is not None:
             self.information_msg.setText("Suppression Impossible, un crédit est encore associé.")
             return
@@ -102,27 +102,31 @@ class ComptesBancairesPage(QWidget):
         depenses = self.depense_service.get_all_depense_from_cb(cb_id)
 
         for recette in recettes:
-            self.recette_service.delete_recette(recette)
+            self.recette_service.delete_recette(recette.id)
         for depense in depenses:
-            self.depense_service.delete_depense(depense)
+            self.depense_service.delete_depense(depense.id)
             
-        self.cb_service.delete_cb(self.cb_service.get_cb_by_id(cb_id))
+        self.cb_service.delete_cb(cb_id)
         self.load()
         
-    def load(self):        
-        self.cb_service.set_cb_actif()
-        self.scenario_label.setText(f"Scénario : {self.scenario_service.scenario_actif.intitule}")
+    def load(self):  
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            self.cb_service.set_cb_actif()
+            self.scenario_label.setText(f"Scénario : {scenario.intitule}")
 
-        self.liste_comptes.clear()
-        if self.session.current_user:
-            cbs = self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif.id)
-            for cb in cbs:
-                banque = self.banque_service.get_banque_by_id(cb.id_banque)
-                date_solde = self.scenario_service.scenario_actif.date_in
-                cb_item = QListWidgetItem(f"compte {cb.type} n°{cb.id}, chez {banque.nom} | {euro(self.cb_service.solde_from_cb(self.scenario_service.scenario_actif.date_in, cb.id,date_solde ).solde)}")
-                cb_item.setData(1, cb.id)
-                self.liste_comptes.addItem(cb_item)
+            self.liste_comptes.clear()
+            if self.session.current_user:
+                cbs = self.cb_service.all_userCB_from_scenario(scenario.id)
+                for cb in cbs:
+                    banque = self.banque_service.get_banque_by_id(cb.id_banque)
+                    date_solde = scenario.date_in
+                    cb_item = QListWidgetItem(f"compte {cb.type} n°{cb.id}, chez {banque.nom} | {euro(self.cb_service.solde_from_cb(scenario.date_in, cb.id,date_solde ).solde)}")
+                    cb_item.setData(1, cb.id)
+                    self.liste_comptes.addItem(cb_item)
 
 
-        self.information_msg.setText("")
-        
+            self.information_msg.setText("")
+        else:
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.NO_SCENARIO)

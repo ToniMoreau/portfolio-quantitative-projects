@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import ClassVar
 from datetime import date
 from utils.date import month_count
-
+from domain.enums import investType, DependentType
 @dataclass
 class Investissement:
     nature: ClassVar[str] = "investissement"    
@@ -73,10 +73,13 @@ class Investissement:
                 return self.prix_vente(date_vente)/(1+monthly_inflation)**(month_count(self.date_in, date_vente))
         else:
             return self.prix_vente(date_vente)/(1+monthly_inflation)**(month_count(self.date_in, date_vente))
+        
+    def get_dependent_type(self):
+        return DependentType.INVESTISSEMENT
 
 @dataclass
 class Immobilier(Investissement):
-    nature: ClassVar[str] = "Immobilier"
+    nature: ClassVar[str] = investType.IMMO.value
     localisation: str
     surface: int
     type: str
@@ -88,13 +91,17 @@ class Immobilier(Investissement):
         return 100 - self.comptant_pct
     def est_actif(self):
         return self.etat == "actif" or self.etat == "vendu"
-    def paiement_comptant(self):
+    @property
+    def apport_personnel(self):
         return self.prix_achat * self.comptant_pct
 @dataclass
 class StockOption(Investissement):
-    nature: ClassVar[str] = "Stock"    
+    nature: ClassVar[str] = investType.STOCK.value
     id_dividendes : int
     dividendes_pct : float
 
     def dividendes_montant(self):
         return self.prix_achat * self.dividendes_pct
+    @property
+    def apport_personnel(self):
+        return self.prix_achat

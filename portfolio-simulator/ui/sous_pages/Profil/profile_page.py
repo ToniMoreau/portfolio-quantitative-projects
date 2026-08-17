@@ -27,7 +27,7 @@ from .outils.outils_page import OutilsPage, CalculImpotsPage
 
 from services import AppContext, Page
 from services.navigator_service import Page
-
+from ui.no_scenario_page import NoScenarioPage
 class ProfilPage(QWidget):
     logout_success = Signal()
     
@@ -62,6 +62,8 @@ class ProfilPage(QWidget):
         self.infos_page = InfoHubPage(self.appContext, self.session)
         self.invest_page = InvestissementHubPage(self.appContext, self.session)
         self.visualisation_page = VisualisationPage()
+        
+        self.no_scenario_page = NoScenarioPage(appContext, session)
 
         self.add_scenario_page = AddScenarioPage(appContext, session)
         self.edit_metier_page = EditMetierPage(appContext, session)
@@ -126,6 +128,7 @@ class ProfilPage(QWidget):
         self.stack.addWidget(self.nouveau_projet_page)
         self.stack.addWidget(self.infos_projet_page)
         self.stack.addWidget(self.calcul_impot_page )
+        self.stack.addWidget(self.no_scenario_page)
         
         
         self.my_pages = {
@@ -135,6 +138,8 @@ class ProfilPage(QWidget):
             Page.INFOS_HUB : self.infos_page,
             Page.INVESTISSEMENT_HUB : self.invest_page,
             Page.VISUALISATION : self.visualisation_page,
+            
+            Page.NO_SCENARIO : self.no_scenario_page,
             
             #INFO / GESTION CHILDREN
             Page.ADD_SCENARIO : self.add_scenario_page,
@@ -194,6 +199,13 @@ class ProfilPage(QWidget):
             page.set_context(context)
         if hasattr(page, "load"):
             page.load()    
+    
+    def load_current_page(self):
+        page = self.stack.currentWidget()
+        if hasattr(page, "load"):
+            page.load()
+            
+            
                     
             
 

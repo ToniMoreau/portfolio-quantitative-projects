@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain.banque import CompteBancaire
+from domain.entities.banque import CompteBancaire
 
 
 class CompteBancaireRepository:
@@ -19,7 +19,7 @@ class CompteBancaireRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID COMPTE", "ID USER", "TYPE", "MONTANT", "TAUX", "MIN","MAX"
+                    "ID COMPTE", "ID SCENARIO", "ID BANQUE", "ID USER", "TYPE", "SOLDE INITIAL", "RENDEMENTS (%/AN)"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)
@@ -50,6 +50,7 @@ class CompteBancaireRepository:
 
         for _, row in rows.iterrows():
             cb = CompteBancaire(
+                id_scenario= int(row["ID SCENARIO"]),
                 id=int(row["ID COMPTE"]),
                 id_banque=int(row["ID BANQUE"]),
                 id_utilisateur=int(row["ID USER"]),
@@ -104,12 +105,14 @@ class CompteBancaireRepository:
         if "ID COMPTE" not in compteBancaire or compteBancaire["ID COMPTE"] is None:
             next_ID = int(df["ID COMPTE"].max()) + 1 if (len(df) and df["ID COMPTE"].notna().any()) else 1
             compteBancaire["ID COMPTE"] = next_ID
-
+        
+        new_id =compteBancaire["ID COMPTE"]
         compteBancaire = pd.DataFrame([compteBancaire])
         df = pd.concat([df,compteBancaire], ignore_index=True)
         self._save_df(df)
-        return self._rows_to_compteBancaire(compteBancaire)[0]
-
+        saved_row = df[df["ID COMPTE"] == new_id]
+        return self._rows_to_compteBancaire(saved_row)[0]
+    
     def update(self, compte_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()
 

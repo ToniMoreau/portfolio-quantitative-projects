@@ -1,19 +1,22 @@
 #flattened
 
-from PySide6.QtWidgets import QListWidget, QListWidgetItem, QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel
+from PySide6.QtWidgets import QMessageBox,QListWidget, QListWidgetItem, QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel
 from PySide6.QtCore import Signal
 
-from services import AppContext, Page
+from services import AppContext, Page, PatrimoineService
 from session import Session
-
+from domain.errors import *
 from .ajouter_credit import AjouterCreditPage
 from .credit_visualizer_page import CréditVisualizerPage
+
+from ui.widgets import confirm_and_delete
 
 class CreditsPage(QWidget):
     back_to_hub = Signal()
     open_invests = Signal()
     def __init__(self, appContext : AppContext, session : Session):
         super().__init__()
+        self.patrimoine_service = appContext.patrimoine_service
         self.credit_service = appContext.credit_service
         self.session = session
         self.banque_service = appContext.banque_service
@@ -52,7 +55,7 @@ class CreditsPage(QWidget):
         layout.addStretch()
         layout.addWidget(self.visualiser)
         layout.addWidget(self.btn_supprimer)
-        layout.addWidget(self.btn_modifier)
+        #layout.addWidget(self.btn_modifier)
         self.visualiser.hide()
         self.btn_supprimer.hide()
         self.btn_modifier.hide()
@@ -71,28 +74,43 @@ class CreditsPage(QWidget):
     def btn_credit_clicked(self, credit_item : QListWidgetItem):
         self.visualiser.show()
         self.btn_supprimer.show()
-        self.btn_modifier.show()
+        #self.btn_modifier.show()
         credit_id = credit_item.data(1)
-        credit = self.credit_service.get_credit_by_id(credit_id)
-        self.credit_service.set_credit_actif(credit)
+        self.credit_service.set_credit_actif(credit_id)
         
     def ajouter_clicked(self):
         self.credit_service.set_credit_actif()
         self.navigator.go_to(Page.AJOUTER_CREDIT)    
             
     def supprimer_clicked(self):
-        self.credit_service.delete_credit(self.credit_service.credit_actif)
-        self.load()
-        
-    def load(self):
-        self.credit_service.set_credit_actif()
-        self.scenario_label.setText(f"Scénario : {self.scenario_service.scenario_actif.intitule}")
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)
+        credit = self.credit_service.get_credit_by_id(self.credit_service.credit_actif_id)
 
-        self.liste_credits.clear()
-        
-        if self.session.current_user:
-            for credit in (self.credit_service.get_all_credits_from_scenario(self.scenario_service.scenario_actif.id) or []):
-                banque = self.banque_service.get_banque_by_id(credit.id_banque)
-                widget_item= QListWidgetItem(f"Crédit n°{credit.id}, chez {banque.nom}, de {credit.montant}.00 €")
-                widget_item.setData(1, credit.id)
-                self.liste_credits.addItem(widget_item)
+        if credit is None:
+            QMessageBox.warning(self, "Erreur", "Aucun crédit sélectionné.")
+            return
+
+        try:
+            if confirm_and_delete(self.patrimoine_service, scenario, credit, self):
+                self.load()
+        except QuantFolioError as e:
+            QMessageBox.critical(self, "Suppression impossible", str(e))   
+                 
+    def load(self):
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            self.credit_service.set_credit_actif()
+            self.scenario_label.setText(f"Scénario : {scenario.intitule}")
+
+            self.liste_credits.clear()
+            
+            if self.session.current_user:
+                for credit in (self.credit_service.get_all_credits_from_scenario(self.scenario_service.scenario_actif_id) or []):
+                    banque = self.banque_service.get_banque_by_id(credit.id_banque)
+                    widget_item= QListWidgetItem(f"Crédit n°{credit.id}, chez {banque.nom}, de {credit.montant}.00 €")
+                    widget_item.setData(1, credit.id)
+                    self.liste_credits.addItem(widget_item)
+        else:
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.CREDITS)
+            

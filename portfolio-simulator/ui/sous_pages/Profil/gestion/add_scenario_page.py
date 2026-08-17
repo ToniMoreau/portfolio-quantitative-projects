@@ -52,11 +52,11 @@ class AddScenarioPage(QWidget):
         layout.addWidget(self.annuler_btn)
         
         #actions boutons
-        self.annuler_btn.clicked.connect(lambda : self.navigator.go_to(Page.INFOS_HUB))
+        self.annuler_btn.clicked.connect(lambda : self.navigator.go_to(Page.ACCUEIL))
         self.enregistrer_btn.clicked.connect(self.enregistrer_clicked)
         
     def enregistrer_clicked(self):    
-        scenario = self.scenario_service.scenario_actif
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
         
         intitule = self.intitule.text().strip()
         month_in = self.month_input.text().strip()
@@ -99,7 +99,7 @@ class AddScenarioPage(QWidget):
         self.month_input.clear()
         self.year_input.clear()
         self.intitule.clear()
-        scenario = self.scenario_service.scenario_actif
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
         if scenario:
             self.title.setText(f"Modifier le scénario {scenario.intitule}, début à {""}")
         else:

@@ -3,18 +3,20 @@
 from PySide6.QtGui import QIntValidator, QDoubleValidator
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QListWidget, QListWidgetItem, QComboBox, QWidget, QVBoxLayout, QHBoxLayout,  QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
+    QMessageBox, QListWidget, QListWidgetItem, QComboBox, QWidget, QVBoxLayout, QHBoxLayout,  QLabel, QPushButton, QLineEdit, QStackedWidget, QSizePolicy
 )
 from services import AppContext, Page
 from services.domain_services.metierService import MetierService
 from session import Session
 from utils.finance_format import age, euro
 from datetime import date
-
+from ui.widgets import confirm_and_delete
+from domain.errors import *
 class EditMetierPage(QWidget):
     back_to_hub = Signal()
     def __init__(self, appContext : AppContext, session : Session):
         super().__init__()
+        self.patrimoine_service = appContext.patrimoine_service
         self.metier_service = appContext.metier_service
         self.recette_service = appContext.recette_service
         self.cb_service = appContext.cb_service
@@ -39,7 +41,7 @@ class EditMetierPage(QWidget):
         
 
     def enregistrer_clicked(self):
-        profil_pro = self.metier_service.metier_actif
+        profil_pro = self.metier_service.get_metier_by_id(self.metier_service.metier_actif_id)
         
         intitule = self.intitule.text().strip()
         annuel_brut = self.annuel_brut.text().strip()
@@ -54,7 +56,7 @@ class EditMetierPage(QWidget):
         year_out = self.fin_annee_input.text().strip()
         
         if profil_pro:
-            id = profil_pro.id_metier
+            id = profil_pro.id
             id_salaire = profil_pro.id_recette
             
             intitule = profil_pro.intitule_métier if not(intitule) else intitule
@@ -94,24 +96,11 @@ class EditMetierPage(QWidget):
             if annuel_net is None:
                 annuel_net = self.fiscalite_service.annuel_net_from_brut(annuel_brut, privé)
                 
-            recette_data = {
-                "ID SCENARIO" : self.scenario_service.scenario_actif.id,
-                "ID USER" : self.session.current_user.id,
-                "ID COMPTE" : id_compte,
-                "DATE IN" : date_in,
-                "DATE OUT" : date_out,
-                "INTITULE" : intitule, 
-                "NATURE" : "Revenus", 
-                "MONTANT" : annuel_net/12 * (1-prlvt_source_pct/100),
-                "FREQUENCE" : "Mensuel"
-            }
-            salaire = self.recette_service.update_recette(id_salaire, recette_data)
             
             data = {
                 "ID USER" : self.session.current_user.id,
                 "ID COMPTE" : id_compte, 
-                "ID SCENARIO" : self.scenario_service.scenario_actif.id,
-                "ID SALAIRE" : salaire.id,
+                "ID SCENARIO" : self.scenario_service.scenario_actif_id,
                 "INTITULE" : intitule,
                 "ANNUEL BRUT (€/AN)" : annuel_brut,
                 "PRIVE" : privé,
@@ -122,7 +111,19 @@ class EditMetierPage(QWidget):
             }
             
             metier = self.metier_service.update_metier(id, data)
-            
+            recette_data = {
+                "ID SCENARIO" : self.scenario_service.scenario_actif_id,
+                "ID USER" : self.session.current_user.id,
+                "ID COMPTE" : id_compte,
+                "DATE IN" : date_in,
+                "DATE OUT" : date_out,
+                "INTITULE" : intitule, 
+                "NATURE" : "Revenus", 
+                "MONTANT" : annuel_net/12 * (1-prlvt_source_pct/100),
+                "FREQUENCE" : "Mensuel",
+                "ID SOURCE" : metier.id
+            }
+            salaire = self.recette_service.update_recette(id_salaire, recette_data)
             self.load()
             self.stack.setCurrentIndex(0)
     
@@ -165,10 +166,18 @@ class EditMetierPage(QWidget):
         return page
     
     def suppr_clicked(self):
-        id_salaire = self.metier_service.metier_actif.id_recette
-        self.recette_service.delete_recette(self.recette_service.get_recette_by_id(id_salaire))
-        self.metier_service.delete(self.metier_service.metier_actif.id_metier)
-        self.load()
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)
+        metier = self.metier_service.get_metier_by_id(self.metier_service.metier_actif_id)
+        print("metier", metier)
+
+        if metier is None:
+            QMessageBox.warning(self, "Suppression Impossible", "Aucun Métier sélectionné.")
+            return
+        try:
+            if confirm_and_delete(self.patrimoine_service, scenario, metier, self):
+                self.load()
+        except QuantFolioError as e:
+            QMessageBox.critical(self, "Suppression impossible", str(e))
         
     def add_edit_clicked(self, mode :str):
         if mode == "add":
@@ -184,7 +193,7 @@ class EditMetierPage(QWidget):
         
         metier_id = metier_item.data(1)
         metier = self.metier_service.get_metier_by_id(metier_id)
-        self.metier_service.set_metier_actif(metier)
+        self.metier_service.set_metier_actif(metier.id)
         
     def edit_metier_page(self):
         page = QWidget()
@@ -274,34 +283,37 @@ class EditMetierPage(QWidget):
         self.enregistrer_btn.clicked.connect(self.enregistrer_clicked)
         return page
 
+    def load(self):        
+        scenario = self.scenario_service.get_scenario_by_id(self.scenario_service.scenario_actif_id)   
+        if scenario:
+            self.scenario_label.setText(f"Scénario : {scenario.intitule}")
 
-    def load(self):
-        self.metier_service.set_metier_actif(None)
-        self.sur_quel_compte.clear()
-        for compte in self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif.id):
-            banque= self.banque_service.get_banque_by_id(compte.id_banque)
-            self.sur_quel_compte.addItem(f"{compte.type}, {banque.nom}", compte.id)
-        
-        metier = self.metier_service.metier_actif
-        if metier:
-            self.title.setText(f"Modifier le métier actuel : {metier.intitule_métier}, {euro(metier.annuel_brut)}.")
+            self.metier_service.set_metier_actif(None)
+            self.sur_quel_compte.clear()
+            for compte in self.cb_service.all_userCB_from_scenario(self.scenario_service.scenario_actif_id):
+                banque= self.banque_service.get_banque_by_id(compte.id_banque)
+                self.sur_quel_compte.addItem(f"{compte.type}, {banque.nom}", compte.id)
             
-        scenario_id = self.scenario_service.scenario_actif.id
-        metiers = self.metier_service.get_metier_by_scenario(scenario_id)
-        self.liste_metier.clear()
-        for metier in metiers:
-            metier_item = QListWidgetItem(f" Du {metier.date_in} au {metier.date_out} : {metier.intitule_métier}, {euro(metier.annuel_brut)}")
-            metier_item.setData(1, metier.id_metier)
-            self.liste_metier.addItem(metier_item)
-        
-        self.intitule.setText("")
-        self.annuel_brut.setText("")
-        self.annuel_net_input.setText("")
-        self.privé.setCurrentIndex(0)
-        self.sur_quel_compte.setCurrentIndex(0)
-        self.prlvt_source_input.setText("")
-        
-        self.scenario_label.setText(f"Scénario : {self.scenario_service.scenario_actif.intitule}")
-        
-        self.modifier_btn.hide()
-        self.suppr_metier_btn.hide()
+            metier = self.metier_service.get_metier_by_id(self.metier_service.metier_actif_id)
+            if metier:
+                self.title.setText(f"Modifier le métier actuel : {metier.intitule_métier}, {euro(metier.annuel_brut)}.")
+                
+            metiers = self.metier_service.get_metier_by_scenario(scenario.id)
+            self.liste_metier.clear()
+            for metier in metiers:
+                metier_item = QListWidgetItem(f" Du {metier.date_in} au {metier.date_out} : {metier.intitule_métier}, {euro(metier.annuel_brut)}")
+                metier_item.setData(1, metier.id)
+                self.liste_metier.addItem(metier_item)
+            
+            self.intitule.setText("")
+            self.annuel_brut.setText("")
+            self.annuel_net_input.setText("")
+            self.privé.setCurrentIndex(0)
+            self.sur_quel_compte.setCurrentIndex(0)
+            self.prlvt_source_input.setText("")
+            
+            self.modifier_btn.hide()
+            self.suppr_metier_btn.hide()
+        else: 
+            self.navigator.go_to(Page.NO_SCENARIO)
+        self.navigator.hold_page(Page.EDIT_METIER)

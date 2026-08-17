@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from pathlib import Path
 
-from domain import Immobilier
+from domain.entities import Immobilier
 
 
 
@@ -20,7 +20,7 @@ class ImmobilierRepository:
             if not self.xlsx_path.exists():
                 # créer une "table" vide si fichier absent
                 self._df_cache = pd.DataFrame(columns=[
-                    "ID IMMOBILIER", "ID USER", "VALEUR (€)", "DATE CREATION", "DATE FIN", "AUGMENTATION (€/AN)"
+                    "ID IMMOBILIER", "ID SCENARIO", "ID USER", "ID COMPTE", "ID CREDIT", "ID ACHAT", "ID VENTE", "PRIX ACHAT", "TITRE", "LOCALISATION", "SURFACE", "TYPE", "COMPTANT (%)", "VALORISATION (%/AN)", "DATE ACHAT", "DATE VENTE", "ETAT"
                 ])
             else:
                 self._df_cache = pd.read_excel(self.xlsx_path, sheet_name=self.sheet_name)
@@ -103,21 +103,19 @@ class ImmobilierRepository:
 
     # --------- writes ---------
     def create(self, immo: dict[str, Any]) -> dict[str, Any]:
-        """
-        user doit contenir au minimum: username, password_hash
-        ID IMMOBILIER sera généré si absent.
-        """
         df = self._load_df()
-
-
         if "ID IMMOBILIER" not in immo or immo["ID IMMOBILIER"] is None:
             next_ID = int(df["ID IMMOBILIER"].max()) + 1 if (len(df) and df["ID IMMOBILIER"].notna().any()) else 1
             immo["ID IMMOBILIER"] = next_ID
-        immo = pd.DataFrame([immo])
-        df = pd.concat([df, immo], ignore_index=True)
-        self._save_df(df)
-        return self._rows_to_immo(immo)[0]
 
+        new_id =immo["ID IMMOBILIER"]
+        immo_df = pd.DataFrame([immo])
+        df = pd.concat([df, immo_df], ignore_index=True)
+        self._save_df(df)
+
+        saved_row = df[df["ID IMMOBILIER"] == new_id]
+        return self._rows_to_immo(saved_row)[0]
+    
     def update(self, immo_ID: int, patch: dict[str, Any]) -> dict[str, Any]:
         df = self._load_df()
 
@@ -133,7 +131,7 @@ class ImmobilierRepository:
             df.at[i, k] = v
 
         self._save_df(df)
-        return self._rows_to_immo(df.iloc[i])[0]
+        return self._rows_to_immo(df.loc[i])[0]
 
     def delete(self, immo_ID: int) -> None:
         df = self._load_df()

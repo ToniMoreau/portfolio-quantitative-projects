@@ -1,7 +1,7 @@
 
-from domain.fiscalité import Fiscalité
-from domain.profil_pro import Salarié
-from domain.scenario import Scenario
+from domain.entities.fiscalité import Fiscalité
+from domain.entities.profil_pro import Salarié
+from domain.entities.scenario import Scenario
 class FiscaliteService:
     def __init__(self, fiscalite : Fiscalité):
         self.fiscalite = fiscalite
