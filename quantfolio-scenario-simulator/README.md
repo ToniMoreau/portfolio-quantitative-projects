@@ -1,9 +1,6 @@
-# Investment Scenario Simulator and Decision Support Tool
+# QuantFolio : Investment Scenario Simulator and Decision Support Tool
 
-PySide application designed to centralize, model, and simulate the evolution of personal wealth across different investment scenarios (real estate, financial markets, savings).
-
-The goal is to provide individuals with a structured and visual tool to better understand the long-term impact of their financial decisions.
-
+**QuantFolio** - a layered financial scenario simulator in Python. Models credit mechanics, banking flows and asset positions over multi-period horizons, with scenarios run in parallel to compare outcome paths under differing assumptions. The domain layer is decoupled from the computation engine, so the current deterministic model can be replaced by a stochastic one without touching the interface. A Monte Carlo pricing and valuation module is in development.
 ---
 
 ## Problem Statement
@@ -162,7 +159,7 @@ This project was developed with the following goals:
 - Deterministic model (no stochastic simulation yet)  
 - Simplified return assumptions  
 - Partial tax modeling  
-- Early-stage development (~100 hours)  
+- Early-stage development (~300 hours)  
 
 ---
 
