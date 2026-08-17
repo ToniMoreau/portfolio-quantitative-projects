@@ -1,6 +1,6 @@
 # QuantFolio : Investment Scenario Simulator and Decision Support Tool
 
-**QuantFolio** - a layered financial scenario simulator in Python. Models credit mechanics, banking flows and asset positions over multi-period horizons, with scenarios run in parallel to compare outcome paths under differing assumptions. The domain layer is decoupled from the computation engine, so the current deterministic model can be replaced by a stochastic one without touching the interface. A Monte Carlo pricing and valuation module is in development.
+*QuantFolio* - a layered financial scenario simulator in Python. Models credit mechanics, banking flows and asset positions over multi-period horizons, with scenarios run in parallel to compare outcome paths under differing assumptions. The domain layer is decoupled from the computation engine, so the current deterministic model can be replaced by a stochastic one without touching the interface. A Monte Carlo pricing and valuation module is in development.
 ---
 
 ## Problem Statement
