@@ -94,8 +94,10 @@ app/
 ├── ui/
 ├── services/
 ├── repositories/
-├── models/
 ├── data/
+├── domain/
+├── docs/
+├── utils/
 └── main.py
 ```
 
@@ -108,11 +110,14 @@ Data is stored in a structured Excel file with multiple sheets:
 - Profiles
 - Accounts
 - Banks
+- Jobs
 - Credits
 - Expenses
 - Income
 - Scenarios
-- Projects
+- Investments:
+  - Real Estate
+  - Stock Options
 
 ---
 
@@ -121,7 +126,7 @@ Data is stored in a structured Excel file with multiple sheets:
 ```bash
 git clone https://github.com/ToniMoreau/portfolio-quantitative-projects.git
 cd portfolio-quantitative-projects
-cd "plateforme simulation investissement"
+cd "quantfolio-scenario-simulator"
 pip install -r requirements.txt
 ```
 
@@ -138,9 +143,10 @@ python main.py
 ## Workflow
 
 - Create a profile and input financial data  
-- Add accounts, credits, and transactions  
+- Add accounts, jobs, credits, and transactions  
 - Create investment projects  
 - Visualize wealth evolution  
+- Compare one scenario against others
 
 ---
 
